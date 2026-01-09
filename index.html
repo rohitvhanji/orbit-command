@@ -78,7 +78,7 @@
     <div class="mgmt-section">
         <span class="mgmt-title">1. Global City Search</span>
         <input type="text" id="cityInput" class="mgmt-input" placeholder="City Name (e.g. Pune, London)">
-        <button class="btn-action btn-blue" onclick="lookupCity()">ADD CITY</button>
+        <button class="btn-action btn-blue" id="addCityBtn" onclick="lookupCity()">ADD CITY</button>
     </div>
 
     <div class="mgmt-section">
@@ -112,8 +112,8 @@
 
 <script>
     // --- DATABASE CONFIGURATION ---
-    const SUPABASE_URL = 'https://xcdnyheqtagizlcyzuzb.supabase.co'; // Replace with yours
-    const SUPABASE_KEY = 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh'; // Replace with yours
+    const SUPABASE_URL = 'https://xcdnyheqtagizlcyzuzb.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh'; 
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let locationData = {};
@@ -143,32 +143,57 @@
 
     // --- PERSISTENCE: SAVE CITY ---
     async function lookupCity() {
-        const city = document.getElementById('cityInput').value.trim();
+        const cityBtn = document.getElementById('addCityBtn');
+        const cityInput = document.getElementById('cityInput');
+        const city = cityInput.value.trim();
+        
         if (!city) return;
+        
+        cityBtn.innerText = "SEARCHING...";
+        cityBtn.disabled = true;
+
         try {
-            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${city}&limit=1`);
+            // FIX: Added User-Agent header (Required by Nominatim API)
+            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`, {
+                headers: { 'User-Agent': 'OrbitSyncApp/1.0' }
+            });
             const data = await resp.json();
-            if (data.length > 0) {
+            
+            if (data && data.length > 0) {
                 const res = data[0];
                 const lat = parseFloat(res.lat);
                 const lon = parseFloat(res.lon);
                 
-                const tzResp = await fetch(`https://worldtimeapi.org/api/timezone/Etc/GMT${lon >= 0 ? '-' : '+'}${Math.abs(Math.round(lon/15))}`);
-                const tzData = await tzResp.json();
-                const offset = tzData.utc_offset ? parseInt(tzData.utc_offset) : Math.round(lon/15);
+                let offset = Math.round(lon / 15); // Fallback math
+                
+                try {
+                    const tzResp = await fetch(`https://worldtimeapi.org/api/timezone/Etc/GMT${lon >= 0 ? '-' : '+'}${Math.abs(Math.round(lon/15))}`);
+                    const tzData = await tzResp.json();
+                    if(tzData.utc_offset) offset = parseInt(tzData.utc_offset);
+                } catch(e) { console.warn("Timezone API failed, using longitude fallback."); }
 
                 const name = res.display_name.split(',')[0];
                 const code = name.substring(0,3).toUpperCase();
 
-                await _supabase.from('locations').insert([{
+                const { error } = await _supabase.from('locations').upsert([{
                     name: name, code: code, lat: lat, lon: lon,
                     utc_offset: offset, tz: `GMT${offset >= 0 ? '+' : ''}${offset}`
                 }]);
 
-                document.getElementById('cityInput').value = '';
-                loadData();
+                if(error) throw error;
+
+                cityInput.value = '';
+                await loadData();
+            } else {
+                alert("City not found. Try adding a country name.");
             }
-        } catch (e) { alert("City search failed."); }
+        } catch (e) { 
+            console.error(e);
+            alert("Search failed. Check console for details."); 
+        } finally {
+            cityBtn.innerText = "ADD CITY";
+            cityBtn.disabled = false;
+        }
     }
 
     // --- PERSISTENCE: SAVE MEMBER ---
@@ -184,6 +209,7 @@
 
     // --- PERSISTENCE: DELETE MEMBER ---
     async function removeMember(dbId) {
+        if(!confirm("Remove this teammate?")) return;
         await _supabase.from('teammates').delete().eq('id', dbId);
         loadData();
     }
@@ -227,6 +253,7 @@
 
         Object.keys(grouped).sort((a,b) => (locationData[b]?.offset || 0) - (locationData[a]?.offset || 0)).forEach(loc => {
             const data = locationData[loc];
+            if(!data) return;
             const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (data.offset * 3600000));
             const timeStr = localTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
             const hr = localTime.getHours();
@@ -303,9 +330,9 @@
         });
     }
 
-    // Start
     loadData();
     resetToLive();
+    setInterval(() => { if(!isFitMode) render(); }, 15000);
 </script>
 </body>
 </html>
