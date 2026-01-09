@@ -32,12 +32,15 @@
             z-index: 2000; display: flex; align-items: center; justify-content: center;
         }
         .auth-card {
-            background: white; padding: 40px; border-radius: 8px; width: 320px;
+            background: white; padding: 40px; border-radius: 8px; width: 340px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center;
         }
         .auth-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--slack-border); border-radius: 4px; box-sizing: border-box; }
+        #auth-status { font-size: 0.75rem; margin-top: 15px; min-height: 1.2em; }
+        .error-msg { color: var(--status-snooze); font-weight: bold; }
+        .success-msg { color: var(--slack-green); font-weight: bold; }
 
-        /* Sidebar & Map styles remain the same as previous version... */
+        /* Sidebar & Layout */
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header { padding: 18px; background: var(--slack-navy); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;}
         .logout-link { font-size: 0.7rem; color: #D1D2D3; cursor: pointer; text-decoration: underline; }
@@ -45,7 +48,7 @@
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; }
         .mgmt-input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 0.8rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; margin-bottom: 6px; }
-        .btn-action { width: 100%; border: none; padding: 8px; cursor: pointer; border-radius: 4px; font-weight: 700; font-size: 0.75rem; transition: background 0.2s; }
+        .btn-action { width: 100%; border: none; padding: 10px; cursor: pointer; border-radius: 4px; font-weight: 700; font-size: 0.75rem; transition: background 0.2s; }
         .btn-blue { background: var(--slack-blue); color: white; }
         .btn-green { background: var(--slack-green); color: white; margin-top: 4px; }
 
@@ -86,12 +89,13 @@
 
 <div id="auth-overlay">
     <div class="auth-card">
-        <h2 style="color: var(--slack-purple)">Loom</h2>
-        <p style="font-size: 0.8rem; color: #666">Sign in to your global instance</p>
+        <h2 style="color: var(--slack-purple); margin-top:0;">LOOM</h2>
+        <p style="font-size: 0.85rem; color: #666">Global Team Coordination Instance</p>
         <input type="email" id="auth-email" class="auth-input" placeholder="Email">
         <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
         <button class="btn-action btn-blue" onclick="handleAuth('login')">SIGN IN</button>
         <button class="btn-action btn-green" onclick="handleAuth('signup')">CREATE ACCOUNT</button>
+        <div id="auth-status"></div>
     </div>
 </div>
 
@@ -157,16 +161,38 @@
 
     const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
 
-    // AUTH LOGIC
+    // --- AUTH LOGIC ---
+
+    function setAuthStatus(msg, isError = true) {
+        const div = document.getElementById('auth-status');
+        div.textContent = msg;
+        div.className = isError ? 'error-msg' : 'success-msg';
+    }
+
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
+        setAuthStatus("Connecting...");
+
+        if(!email || !password) {
+            setAuthStatus("Email and password required.");
+            return;
+        }
+
         const { data, error } = type === 'login' 
             ? await _supabase.auth.signInWithPassword({ email, password })
             : await _supabase.auth.signUp({ email, password });
 
-        if (error) alert(error.message);
-        else checkSession();
+        if (error) {
+            setAuthStatus(error.message);
+        } else {
+            if (type === 'signup' && !data.session) {
+                setAuthStatus("Signup success! Check your email or try login.", false);
+            } else {
+                setAuthStatus("Authorized.", false);
+                checkSession();
+            }
+        }
     }
 
     async function checkSession() {
@@ -182,13 +208,15 @@
         location.reload();
     }
 
-    // DATA LOGIC
+    // --- DATA LOGIC ---
     function getTZName(offset) { return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
 
     async function loadData() {
-        const { data: locs } = await _supabase.from('locations').select('*');
-        const { data: members } = await _supabase.from('teammates').select('*');
+        const { data: locs, error: lErr } = await _supabase.from('locations').select('*');
+        const { data: members, error: mErr } = await _supabase.from('teammates').select('*');
         
+        if(lErr || mErr) console.error("Data Load Error:", lErr || mErr);
+
         locationData = {};
         if(locs) locs.forEach(l => {
             locationData[l.name] = { id: l.id, code: l.code, lat: l.lat, lon: l.lon, offset: l.utc_offset, tz: getTZName(l.utc_offset) };
@@ -199,7 +227,6 @@
         render();
     }
 
-    // Lookups & Actions (unchanged, but now filtered by user_id automatically by Supabase)
     async function lookupCity() {
         const btn = document.getElementById('addCityBtn');
         const cityInput = document.getElementById('cityInput');
@@ -241,9 +268,10 @@
         loadData();
     }
 
-    // UI RENDER HELPERS
+    // --- UI HELPERS ---
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc');
+        if(!sel) return;
         sel.innerHTML = '';
         Object.keys(locationData).sort().forEach(loc => {
             const opt = document.createElement('option');
@@ -275,6 +303,7 @@
     function render() {
         const ref = isFitMode ? workDate : new Date();
         const container = document.getElementById('member-groups');
+        if(!container) return;
         container.innerHTML = '';
         
         let totalMates = team.length;
@@ -349,6 +378,7 @@
         const labels = document.getElementById('grid-label-layer');
         const text = document.getElementById('time-text-layer');
         const markers = document.getElementById('marker-layer');
+        if(!night) return;
         night.innerHTML = ''; lines.innerHTML = ''; labels.innerHTML = ''; text.innerHTML = ''; markers.innerHTML = '';
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         for(let i = 0; i < 24; i++) {
@@ -380,10 +410,12 @@
             const d = locationData[loc];
             const px = (d.lon + 180) * (2.222); const py = (90 - d.lat) * (2.222);
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 3); dot.setAttribute("class", "pin");
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py);
+            dot.setAttribute("r", 3); dot.setAttribute("class", "pin");
             markers.appendChild(dot);
             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            txt.setAttribute("x", px + 8); txt.setAttribute("y", py + 3); txt.setAttribute("class", "pin-lbl"); txt.textContent = d.code;
+            txt.setAttribute("x", px + 8); txt.setAttribute("y", py + 3);
+            txt.setAttribute("class", "pin-lbl"); txt.textContent = d.code;
             markers.appendChild(txt);
         });
     }
