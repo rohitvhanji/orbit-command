@@ -33,7 +33,7 @@
             border-right: 1px solid rgba(255,255,255,0.1);
         }
         .sidebar-header { padding: 18px; background: var(--slack-navy); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase; }
+        .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
 
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; }
@@ -52,32 +52,35 @@
         .btn-green { background: var(--slack-green); color: white; margin-top: 4px; }
 
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 80px; }
-        .location-card { border-bottom: 1px solid rgba(255,255,255,0.05); }
         
-        /* Unified Header Style */
-        .loc-header { 
-            padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;
-            background: rgba(0,0,0,0.15); transition: background 0.2s;
+        .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
+        .tz-header { 
+            padding: 8px 15px; font-size: 0.75rem; font-weight: 900; 
+            text-transform: uppercase; letter-spacing: 1.2px;
+            background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-between; align-items: center;
         }
+        .home-tag { font-size: 0.55rem; background: var(--slack-blue); padding: 1px 5px; border-radius: 4px; color: white; margin-left: 5px; }
+
+        .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .loc-header { padding: 10px 15px 10px 25px; display: flex; justify-content: space-between; align-items: center; }
         .loc-name { font-weight: 700; font-size: 0.85rem; }
         .loc-right { display: flex; align-items: center; gap: 10px; }
         .loc-time { font-family: "Monaco", monospace; font-size: 0.8rem; color: #D1D2D3; }
         
-        /* Standardized Delete Icon */
         .btn-standard-del { 
             cursor: pointer; opacity: 0; font-size: 1.1rem; color: rgba(255,255,255,0.4); 
             transition: all 0.2s; line-height: 1; 
         }
         .location-card:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; }
-        .btn-standard-del:hover { color: var(--status-snooze) !important; transform: scale(1.2); }
+        .btn-standard-del:hover { color: var(--status-snooze) !important; }
 
-        .member-row { padding: 6px 15px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
+        .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
         .member-row:hover { background: rgba(255,255,255,0.1); }
         .member-left-side { display: flex; align-items: center; gap: 10px; color: #fff; }
         .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-        .member-right-side { display: flex; align-items: center; gap: 10px; }
 
-        /* Map View */
+        /* Map */
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; }
         #map-bg { 
@@ -96,7 +99,6 @@
         .pin { fill: var(--slack-blue); stroke: white; stroke-width: 1; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
 
-        /* Control Panel */
         #scheduler { 
             position: absolute; bottom: 0; left: 0; right: 0;
             padding: 12px 30px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border);
@@ -115,17 +117,17 @@
 <body>
 
 <div id="sidebar">
-    <div class="sidebar-header"><h2>Loom</h2></div>
+    <div class="sidebar-header"><h2>LOOM</h2></div>
     
     <div class="mgmt-section">
-        <span class="mgmt-title">Offices</span>
-        <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
+        <span class="mgmt-title">Network Nodes</span>
+        <input type="text" id="cityInput" class="mgmt-input" placeholder="Add Office City...">
         <button class="btn-action btn-blue" id="addCityBtn" onclick="lookupCity()">ADD OFFICE</button>
     </div>
 
     <div class="mgmt-section">
-        <span class="mgmt-title">Team Mates</span>
-        <input type="text" id="newName" class="mgmt-input" placeholder="Teammate name...">
+        <span class="mgmt-title">Personnel</span>
+        <input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name...">
         <select id="newLoc" class="mgmt-input"></select>
         <button class="btn-action btn-green" onclick="addMember()">ADD TEAM MATE</button>
     </div>
@@ -172,12 +174,25 @@
     let isFitMode = false;
     let workDate = new Date();
 
+    // Comprehensive Enterprise Mapper
+    const TZ_MAP = {
+        "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST",
+        "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST",
+        "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT"
+    };
+
+    function getTZName(offset) {
+        return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`);
+    }
+
     async function loadData() {
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
         locs.forEach(l => {
-            locationData[l.name] = { id: l.id, code: l.code, lat: l.lat, lon: l.lon, offset: l.utc_offset, tz: l.tz };
+            // Clean up existing data to ensure "GMT-8" becomes "PST" etc.
+            const cleanTZ = getTZName(l.utc_offset);
+            locationData[l.name] = { id: l.id, code: l.code, lat: l.lat, lon: l.lon, offset: l.utc_offset, tz: cleanTZ };
         });
         team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
         populateLocDropdown();
@@ -186,30 +201,34 @@
 
     async function lookupCity() {
         const btn = document.getElementById('addCityBtn');
-        const city = document.getElementById('cityInput').value.trim();
+        const cityInput = document.getElementById('cityInput');
+        const city = cityInput.value.trim();
         if (!city) return;
         btn.innerText = "QUERYING...";
         try {
             const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`, {
-                headers: { 'User-Agent': 'NexusApp/1.0' }
+                headers: { 'User-Agent': 'LoomApp/4.0' }
             });
             const data = await resp.json();
             if (data && data.length > 0) {
                 const res = data[0];
-                let offset = Math.round(parseFloat(res.lon) / 15);
+                let offset = Math.round(parseFloat(res.lon) / 15 * 2) / 2;
                 const name = res.display_name.split(',')[0];
+                
+                let tzLabel = getTZName(offset);
+
                 await _supabase.from('locations').upsert([{
                     name: name, code: name.substring(0,3).toUpperCase(), lat: parseFloat(res.lat), lon: parseFloat(res.lon),
-                    utc_offset: offset, tz: `GMT${offset >= 0 ? '+' : ''}${offset}`
+                    utc_offset: offset, tz: tzLabel
                 }]);
-                document.getElementById('cityInput').value = '';
+                cityInput.value = '';
                 await loadData();
             }
-        } catch (e) { alert("Registration failed."); } finally { btn.innerText = "ADD OFFICE"; }
+        } catch (e) { console.error(e); } finally { btn.innerText = "ADD OFFICE"; }
     }
 
     async function removeLocation(name) {
-        if(!confirm(`Delete ${name} office and all team mates?`)) return;
+        if(!confirm(`Delete ${name} office?`)) return;
         await _supabase.from('locations').delete().eq('name', name);
         await loadData();
     }
@@ -253,10 +272,10 @@
     }
 
     function getStatusInfo(hr) {
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", isWork: false };
-        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", isWork: true };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--status-work)", isWork: true };
-        return { emoji: "🏠", color: "var(--slack-blue)", isWork: false };
+        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", isWork: false, label: "Snoozing" };
+        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", isWork: true, label: "Lunch" };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--status-work)", isWork: true, label: "Working" };
+        return { emoji: "🏠", color: "var(--slack-blue)", isWork: false, label: "Personal" };
     }
 
     function render() {
@@ -267,36 +286,67 @@
         let totalMates = team.length;
         let availableMates = 0;
 
-        Object.keys(locationData).sort((a,b) => locationData[b].offset - locationData[a].offset).forEach(loc => {
-            const data = locationData[loc];
-            const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (data.offset * 3600000));
-            const hr = localTime.getHours();
-            const status = getStatusInfo(hr);
-            const matesInLoc = team.filter(m => m.loc === loc);
+        const currentOffset = - (new Date().getTimezoneOffset() / 60);
+
+        const tzGroups = {};
+        Object.keys(locationData).forEach(locName => {
+            const tz = locationData[locName].tz;
+            if(!tzGroups[tz]) tzGroups[tz] = [];
+            tzGroups[tz].push(locName);
+        });
+
+        const sortedTZs = Object.keys(tzGroups).sort((a, b) => {
+            const offA = locationData[tzGroups[a][0]].offset;
+            const offB = locationData[tzGroups[b][0]].offset;
+            if (offA === currentOffset) return -1;
+            if (offB === currentOffset) return 1;
+            return Math.abs(currentOffset - offA) - Math.abs(currentOffset - offB);
+        });
+
+        sortedTZs.forEach(tz => {
+            const sampleLoc = locationData[tzGroups[tz][0]];
+            const sampleTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (sampleLoc.offset * 3600000));
+            const status = getStatusInfo(sampleTime.getHours());
+            const isHome = sampleLoc.offset === currentOffset;
             
-            let html = `<div class="location-card">
-                <div class="loc-header">
-                    <span class="loc-name">${loc}</span>
-                    <div class="loc-right">
-                        <span class="loc-time">${localTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</span>
-                        <span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span>
-                    </div>
+            let tzHtml = `<div class="timezone-group">
+                <div class="tz-header" style="border-left: 4px solid ${status.color}; color: ${status.color}">
+                    <span>${tz} ${isHome ? '<span class="home-tag">HOME</span>' : ''}</span>
+                    <span style="font-size:0.6rem; opacity:0.8">${status.label}</span>
                 </div>`;
             
-            matesInLoc.forEach(m => { 
-                if(status.isWork) availableMates++;
-                html += `<div class="member-row">
-                    <div class="member-left-side">
-                        <span class="status-dot" style="background:${status.color}"></span>
-                        <span>${m.name}</span>
-                    </div>
-                    <div class="member-right-side">
-                        <span style="font-size:1rem;">${status.emoji}</span>
-                        <span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span>
-                    </div>
-                </div>`; 
+            tzGroups[tz].forEach(loc => {
+                const data = locationData[loc];
+                const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (data.offset * 3600000));
+                const matesInLoc = team.filter(m => m.loc === loc);
+                
+                tzHtml += `<div class="location-card">
+                    <div class="loc-header">
+                        <span class="loc-name">${loc}</span>
+                        <div class="loc-right">
+                            <span class="loc-time">${localTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</span>
+                            <span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span>
+                        </div>
+                    </div>`;
+                
+                matesInLoc.forEach(m => { 
+                    const hr = localTime.getHours();
+                    const s = getStatusInfo(hr);
+                    if(s.isWork) availableMates++;
+                    tzHtml += `<div class="member-row">
+                        <div class="member-left-side">
+                            <span class="status-dot" style="background:${s.color}"></span>
+                            <span>${m.name}</span>
+                        </div>
+                        <div class="member-right-side">
+                            <span style="font-size:1rem;">${s.emoji}</span>
+                            <span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span>
+                        </div>
+                    </div>`; 
+                });
+                tzHtml += `</div>`;
             });
-            container.innerHTML += html + '</div>';
+            container.innerHTML += tzHtml + `</div>`;
         });
 
         const pct = totalMates > 0 ? Math.round((availableMates / totalMates) * 100) : 0;
