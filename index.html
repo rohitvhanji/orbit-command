@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Loom | Global Coordination</title>
+    <title>Loom | Global Team Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -26,7 +26,7 @@
             margin: 0; display: flex; height: 100vh; overflow: hidden;
         }
 
-        /* Login Overlay */
+        /* Auth Layer */
         #auth-overlay {
             position: fixed; inset: 0; background: var(--slack-purple);
             z-index: 2000; display: flex; align-items: center; justify-content: center;
@@ -40,7 +40,7 @@
         .error-msg { color: var(--status-snooze); font-weight: bold; }
         .success-msg { color: var(--slack-green); font-weight: bold; }
 
-        /* Sidebar & Layout */
+        /* Sidebar */
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header { padding: 18px; background: var(--slack-navy); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;}
         .logout-link { font-size: 0.7rem; color: #D1D2D3; cursor: pointer; text-decoration: underline; }
@@ -56,6 +56,7 @@
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
         .tz-header { padding: 8px 15px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
         .home-tag { font-size: 0.55rem; background: var(--slack-blue); padding: 1px 5px; border-radius: 4px; color: white; margin-left: 5px; }
+        
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
         .loc-header { padding: 10px 15px 10px 25px; display: flex; justify-content: space-between; align-items: center; }
         .loc-name { font-weight: 700; font-size: 0.85rem; }
@@ -63,11 +64,13 @@
         .loc-time { font-family: "Monaco", monospace; font-size: 0.8rem; color: #D1D2D3; }
         .btn-standard-del { cursor: pointer; opacity: 0; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: all 0.2s; line-height: 1; }
         .location-card:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; }
+        
         .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
         .member-row:hover { background: rgba(255,255,255,0.1); }
         .member-left-side { display: flex; align-items: center; gap: 10px; color: #fff; }
         .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 
+        /* Map */
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.4) brightness(1.1); }
@@ -90,7 +93,6 @@
 <div id="auth-overlay">
     <div class="auth-card">
         <h2 style="color: var(--slack-purple); margin-top:0;">LOOM</h2>
-        <p style="font-size: 0.85rem; color: #666">Global Team Coordination Instance</p>
         <input type="email" id="auth-email" class="auth-input" placeholder="Email">
         <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
         <button class="btn-action btn-blue" onclick="handleAuth('login')">SIGN IN</button>
@@ -107,12 +109,12 @@
     
     <div class="mgmt-section">
         <span class="mgmt-title">Offices</span>
-        <input type="text" id="cityInput" class="mgmt-input" placeholder="City...">
+        <input type="text" id="cityInput" class="mgmt-input" placeholder="Add City...">
         <button class="btn-action btn-blue" id="addCityBtn" onclick="lookupCity()">ADD OFFICE</button>
     </div>
 
     <div class="mgmt-section">
-        <span class="mgmt-title">Team Mates</span>
+        <span class="mgmt-title">Personnel</span>
         <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
         <select id="newLoc" class="mgmt-input"></select>
         <button class="btn-action btn-green" onclick="addMember()">ADD TEAM MATE</button>
@@ -161,38 +163,23 @@
 
     const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
 
-    // --- AUTH LOGIC ---
+    function getTZName(offset) { return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
 
+    // --- AUTH ---
     function setAuthStatus(msg, isError = true) {
         const div = document.getElementById('auth-status');
-        div.textContent = msg;
-        div.className = isError ? 'error-msg' : 'success-msg';
+        div.textContent = msg; div.className = isError ? 'error-msg' : 'success-msg';
     }
 
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
         setAuthStatus("Connecting...");
-
-        if(!email || !password) {
-            setAuthStatus("Email and password required.");
-            return;
-        }
-
         const { data, error } = type === 'login' 
             ? await _supabase.auth.signInWithPassword({ email, password })
             : await _supabase.auth.signUp({ email, password });
-
-        if (error) {
-            setAuthStatus(error.message);
-        } else {
-            if (type === 'signup' && !data.session) {
-                setAuthStatus("Signup success! Check your email or try login.", false);
-            } else {
-                setAuthStatus("Authorized.", false);
-                checkSession();
-            }
-        }
+        if (error) setAuthStatus(error.message);
+        else checkSession();
     }
 
     async function checkSession() {
@@ -203,79 +190,61 @@
         }
     }
 
-    async function logout() {
-        await _supabase.auth.signOut();
-        location.reload();
-    }
+    async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
-    // --- DATA LOGIC ---
-    function getTZName(offset) { return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
-
+    // --- LOGIC ---
     async function loadData() {
-        const { data: locs, error: lErr } = await _supabase.from('locations').select('*');
-        const { data: members, error: mErr } = await _supabase.from('teammates').select('*');
-        
-        if(lErr || mErr) console.error("Data Load Error:", lErr || mErr);
-
+        const { data: locs } = await _supabase.from('locations').select('*');
+        const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
         if(locs) locs.forEach(l => {
             locationData[l.name] = { id: l.id, code: l.code, lat: l.lat, lon: l.lon, offset: l.utc_offset, tz: getTZName(l.utc_offset) };
         });
         team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
-        
-        populateLocDropdown();
-        render();
+        populateLocDropdown(); render();
     }
 
     async function lookupCity() {
         const btn = document.getElementById('addCityBtn');
-        const cityInput = document.getElementById('cityInput');
-        const city = cityInput.value.trim();
+        const city = document.getElementById('cityInput').value.trim();
         if (!city) return;
         btn.innerText = "QUERYING...";
         try {
-            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`, { headers: { 'User-Agent': 'LoomApp/5.0' } });
+            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`, { headers: { 'User-Agent': 'LoomApp/6.0' } });
             const data = await resp.json();
             if (data && data.length > 0) {
                 const res = data[0];
                 let offset = Math.round(parseFloat(res.lon) / 15 * 2) / 2;
                 const name = res.display_name.split(',')[0];
-                await _supabase.from('locations').upsert([{ name, code: name.substring(0,3).toUpperCase(), lat: parseFloat(res.lat), lon: parseFloat(res.lon), utc_offset: offset, tz: getTZName(offset) }]);
-                cityInput.value = '';
+                const { data: { user } } = await _supabase.auth.getUser();
+                await _supabase.from('locations').upsert({
+                    name, code: name.substring(0,3).toUpperCase(), lat: parseFloat(res.lat), lon: parseFloat(res.lon), utc_offset: offset, tz: getTZName(offset), user_id: user.id
+                }, { onConflict: 'user_id, name' });
+                document.getElementById('cityInput').value = '';
                 loadData();
             }
         } catch (e) { console.error(e); } finally { btn.innerText = "ADD OFFICE"; }
-    }
-
-    async function removeLocation(name) {
-        if(!confirm(`Delete ${name} office?`)) return;
-        await _supabase.from('locations').delete().eq('name', name);
-        loadData();
     }
 
     async function addMember() {
         const name = document.getElementById('newName').value.trim();
         const loc = document.getElementById('newLoc').value;
         if (name && loc) {
-            await _supabase.from('teammates').insert([{ name, location_name: loc }]);
+            const { data: { user } } = await _supabase.auth.getUser();
+            await _supabase.from('teammates').insert([{ name, location_name: loc, user_id: user.id }]);
             document.getElementById('newName').value = '';
             loadData();
         }
     }
 
-    async function removeMember(dbId) {
-        await _supabase.from('teammates').delete().eq('id', dbId);
-        loadData();
-    }
+    async function removeLocation(name) { if(confirm(`Delete ${name}?`)) { await _supabase.from('locations').delete().eq('name', name); loadData(); } }
+    async function removeMember(dbId) { await _supabase.from('teammates').delete().eq('id', dbId); loadData(); }
 
-    // --- UI HELPERS ---
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc');
-        if(!sel) return;
         sel.innerHTML = '';
         Object.keys(locationData).sort().forEach(loc => {
-            const opt = document.createElement('option');
-            opt.value = loc; opt.textContent = loc; sel.appendChild(opt);
+            const opt = document.createElement('option'); opt.value = loc; opt.textContent = loc; sel.appendChild(opt);
         });
     }
 
@@ -303,20 +272,15 @@
     function render() {
         const ref = isFitMode ? workDate : new Date();
         const container = document.getElementById('member-groups');
-        if(!container) return;
         container.innerHTML = '';
-        
-        let totalMates = team.length;
-        let availableMates = 0;
+        let totalMates = team.length; let availableMates = 0;
         const currentOffset = - (new Date().getTimezoneOffset() / 60);
-
         const tzGroups = {};
         Object.keys(locationData).forEach(locName => {
             const tz = locationData[locName].tz;
             if(!tzGroups[tz]) tzGroups[tz] = [];
             tzGroups[tz].push(locName);
         });
-
         const sortedTZs = Object.keys(tzGroups).sort((a, b) => {
             const offA = locationData[tzGroups[a][0]].offset;
             const offB = locationData[tzGroups[b][0]].offset;
@@ -324,27 +288,19 @@
             if (offB === currentOffset) return 1;
             return Math.abs(currentOffset - offA) - Math.abs(currentOffset - offB);
         });
-
         sortedTZs.forEach(tz => {
             const sampleLoc = locationData[tzGroups[tz][0]];
             const sampleTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (sampleLoc.offset * 3600000));
             const status = getStatusInfo(sampleTime.getHours());
             const isHome = sampleLoc.offset === currentOffset;
-            
-            let tzHtml = `<div class="timezone-group">
-                <div class="tz-header" style="border-left: 4px solid ${status.color}; color: ${status.color}">
-                    <span>${tz} ${isHome ? '<span class="home-tag">HOME</span>' : ''}</span>
-                    <span style="font-size:0.6rem; opacity:0.8">${status.label}</span>
-                </div>`;
-            
+            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="border-left: 4px solid ${status.color}; color: ${status.color}"><span>${tz} ${isHome ? '<span class="home-tag">HOME</span>' : ''}</span><span style="font-size:0.6rem; opacity:0.8">${status.label}</span></div>`;
             tzGroups[tz].forEach(loc => {
                 const data = locationData[loc];
                 const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (data.offset * 3600000));
                 const matesInLoc = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span class="loc-name">${loc}</span><div class="loc-right"><span class="loc-time">${localTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div></div>`;
                 matesInLoc.forEach(m => { 
-                    const hr = localTime.getHours();
-                    const s = getStatusInfo(hr);
+                    const s = getStatusInfo(localTime.getHours());
                     if(s.isWork) availableMates++;
                     tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div class="member-right-side"><span style="font-size:1rem;">${s.emoji}</span><span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
@@ -352,11 +308,9 @@
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-
         const pct = totalMates > 0 ? Math.round((availableMates / totalMates) * 100) : 0;
         const pVal = document.getElementById('predictVal');
-        pVal.innerText = pct + "%";
-        pVal.style.color = pct >= 80 ? 'var(--slack-green)' : pct > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
+        pVal.innerText = pct + "%"; pVal.style.color = pct >= 80 ? 'var(--slack-green)' : pct > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
         drawMap(ref);
     }
 
@@ -378,7 +332,6 @@
         const labels = document.getElementById('grid-label-layer');
         const text = document.getElementById('time-text-layer');
         const markers = document.getElementById('marker-layer');
-        if(!night) return;
         night.innerHTML = ''; lines.innerHTML = ''; labels.innerHTML = ''; text.innerHTML = ''; markers.innerHTML = '';
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         for(let i = 0; i < 24; i++) {
@@ -410,8 +363,7 @@
             const d = locationData[loc];
             const px = (d.lon + 180) * (2.222); const py = (90 - d.lat) * (2.222);
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py);
-            dot.setAttribute("r", 3); dot.setAttribute("class", "pin");
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 3); dot.setAttribute("class", "pin");
             markers.appendChild(dot);
             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
             txt.setAttribute("x", px + 8); txt.setAttribute("y", py + 3);
@@ -420,8 +372,7 @@
         });
     }
 
-    checkSession();
-    sync();
+    checkSession(); sync();
     setInterval(() => { if(!isFitMode) render(); }, 30000);
 </script>
 </body>
