@@ -26,108 +26,90 @@
             margin: 0; display: flex; height: 100vh; overflow: hidden;
         }
 
-        /* Sidebar */
-        #sidebar {
-            width: 340px; background: var(--slack-purple); color: white;
-            display: flex; flex-direction: column; z-index: 100;
-            border-right: 1px solid rgba(255,255,255,0.1);
+        /* Login Overlay */
+        #auth-overlay {
+            position: fixed; inset: 0; background: var(--slack-purple);
+            z-index: 2000; display: flex; align-items: center; justify-content: center;
         }
-        .sidebar-header { padding: 18px; background: var(--slack-navy); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+        .auth-card {
+            background: white; padding: 40px; border-radius: 8px; width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center;
+        }
+        .auth-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--slack-border); border-radius: 4px; box-sizing: border-box; }
 
+        /* Sidebar & Map styles remain the same as previous version... */
+        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header { padding: 18px; background: var(--slack-navy); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;}
+        .logout-link { font-size: 0.7rem; color: #D1D2D3; cursor: pointer; text-decoration: underline; }
+        
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; }
-        
-        .mgmt-input { 
-            width: 100%; box-sizing: border-box; padding: 8px; font-size: 0.8rem; 
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px;
-            margin-bottom: 6px;
-        }
-        
-        .btn-action { 
-            width: 100%; border: none; padding: 8px; cursor: pointer; border-radius: 4px; 
-            font-weight: 700; font-size: 0.75rem; transition: background 0.2s;
-        }
+        .mgmt-input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 0.8rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; margin-bottom: 6px; }
+        .btn-action { width: 100%; border: none; padding: 8px; cursor: pointer; border-radius: 4px; font-weight: 700; font-size: 0.75rem; transition: background 0.2s; }
         .btn-blue { background: var(--slack-blue); color: white; }
         .btn-green { background: var(--slack-green); color: white; margin-top: 4px; }
 
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 80px; }
-        
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
-        .tz-header { 
-            padding: 8px 15px; font-size: 0.75rem; font-weight: 900; 
-            text-transform: uppercase; letter-spacing: 1.2px;
-            background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05);
-            display: flex; justify-content: space-between; align-items: center;
-        }
+        .tz-header { padding: 8px 15px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
         .home-tag { font-size: 0.55rem; background: var(--slack-blue); padding: 1px 5px; border-radius: 4px; color: white; margin-left: 5px; }
-
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
         .loc-header { padding: 10px 15px 10px 25px; display: flex; justify-content: space-between; align-items: center; }
         .loc-name { font-weight: 700; font-size: 0.85rem; }
         .loc-right { display: flex; align-items: center; gap: 10px; }
         .loc-time { font-family: "Monaco", monospace; font-size: 0.8rem; color: #D1D2D3; }
-        
-        .btn-standard-del { 
-            cursor: pointer; opacity: 0; font-size: 1.1rem; color: rgba(255,255,255,0.4); 
-            transition: all 0.2s; line-height: 1; 
-        }
+        .btn-standard-del { cursor: pointer; opacity: 0; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: all 0.2s; line-height: 1; }
         .location-card:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; }
-        .btn-standard-del:hover { color: var(--status-snooze) !important; }
-
         .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
         .member-row:hover { background: rgba(255,255,255,0.1); }
         .member-left-side { display: flex; align-items: center; gap: 10px; color: #fff; }
         .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 
-        /* Map */
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; }
-        #map-bg { 
-            width: 100%; height: 100%; 
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); 
-            background-size: 100% 100%; filter: saturate(0.4) brightness(1.1);
-        }
+        #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.4) brightness(1.1); }
         #svg-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-
         .grid-line { stroke-width: 2.5; opacity: 0.8; }
-        .map-label-text { 
-            font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;
-            paint-order: stroke; stroke: white; stroke-width: 2.5px;
-        }
+        .map-label-text { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; paint-order: stroke; stroke: white; stroke-width: 2.5px; }
         .time-marker-txt { font-size: 11px; fill: var(--text-dark); font-weight: 900; opacity: 0.6; }
         .pin { fill: var(--slack-blue); stroke: white; stroke-width: 1; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
 
-        #scheduler { 
-            position: absolute; bottom: 0; left: 0; right: 0;
-            padding: 12px 30px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border);
-            display: flex; gap: 20px; align-items: center; justify-content: center; z-index: 1000;
-        }
+        #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 30px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 20px; align-items: center; justify-content: center; z-index: 1000; }
         .sched-control { border: 1px solid var(--slack-border); padding: 5px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
-        
-        #acceptance-box {
-            display: flex; flex-direction: column; align-items: center;
-            padding: 0 20px; border-left: 1px solid var(--slack-border);
-        }
+        #acceptance-box { display: flex; flex-direction: column; align-items: center; padding: 0 20px; border-left: 1px solid var(--slack-border); }
         .acceptance-val { font-size: 1rem; font-weight: 900; }
         .acceptance-lbl { font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
     </style>
 </head>
 <body>
 
+<div id="auth-overlay">
+    <div class="auth-card">
+        <h2 style="color: var(--slack-purple)">Loom</h2>
+        <p style="font-size: 0.8rem; color: #666">Sign in to your global instance</p>
+        <input type="email" id="auth-email" class="auth-input" placeholder="Email">
+        <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
+        <button class="btn-action btn-blue" onclick="handleAuth('login')">SIGN IN</button>
+        <button class="btn-action btn-green" onclick="handleAuth('signup')">CREATE ACCOUNT</button>
+    </div>
+</div>
+
 <div id="sidebar">
-    <div class="sidebar-header"><h2>LOOM</h2></div>
+    <div class="sidebar-header">
+        <h2>LOOM</h2>
+        <span class="logout-link" onclick="logout()">Logout</span>
+    </div>
     
     <div class="mgmt-section">
-        <span class="mgmt-title">Network Nodes</span>
-        <input type="text" id="cityInput" class="mgmt-input" placeholder="Add Office City...">
+        <span class="mgmt-title">Offices</span>
+        <input type="text" id="cityInput" class="mgmt-input" placeholder="City...">
         <button class="btn-action btn-blue" id="addCityBtn" onclick="lookupCity()">ADD OFFICE</button>
     </div>
 
     <div class="mgmt-section">
-        <span class="mgmt-title">Personnel</span>
-        <input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name...">
+        <span class="mgmt-title">Team Mates</span>
+        <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
         <select id="newLoc" class="mgmt-input"></select>
         <button class="btn-action btn-green" onclick="addMember()">ADD TEAM MATE</button>
     </div>
@@ -156,7 +138,6 @@
         </div>
         <button class="btn-action btn-blue" style="width:auto; padding: 6px 15px;" onclick="setFitMode(true)">SIMULATE SLOT</button>
         <button class="btn-action" style="width:auto; padding: 6px 15px; background:var(--slack-purple); color:white;" onclick="resetToLive()">LIVE SYNC</button>
-        
         <div id="acceptance-box">
             <span id="predictVal" class="acceptance-val">0%</span>
             <span class="acceptance-lbl">Acceptance</span>
@@ -174,31 +155,51 @@
     let isFitMode = false;
     let workDate = new Date();
 
-    // Comprehensive Enterprise Mapper
-    const TZ_MAP = {
-        "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST",
-        "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST",
-        "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT"
-    };
+    const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
 
-    function getTZName(offset) {
-        return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`);
+    // AUTH LOGIC
+    async function handleAuth(type) {
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-pass').value;
+        const { data, error } = type === 'login' 
+            ? await _supabase.auth.signInWithPassword({ email, password })
+            : await _supabase.auth.signUp({ email, password });
+
+        if (error) alert(error.message);
+        else checkSession();
     }
+
+    async function checkSession() {
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (session) {
+            document.getElementById('auth-overlay').style.display = 'none';
+            loadData();
+        }
+    }
+
+    async function logout() {
+        await _supabase.auth.signOut();
+        location.reload();
+    }
+
+    // DATA LOGIC
+    function getTZName(offset) { return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
 
     async function loadData() {
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
+        
         locationData = {};
-        locs.forEach(l => {
-            // Clean up existing data to ensure "GMT-8" becomes "PST" etc.
-            const cleanTZ = getTZName(l.utc_offset);
-            locationData[l.name] = { id: l.id, code: l.code, lat: l.lat, lon: l.lon, offset: l.utc_offset, tz: cleanTZ };
+        if(locs) locs.forEach(l => {
+            locationData[l.name] = { id: l.id, code: l.code, lat: l.lat, lon: l.lon, offset: l.utc_offset, tz: getTZName(l.utc_offset) };
         });
-        team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
+        team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
+        
         populateLocDropdown();
         render();
     }
 
+    // Lookups & Actions (unchanged, but now filtered by user_id automatically by Supabase)
     async function lookupCity() {
         const btn = document.getElementById('addCityBtn');
         const cityInput = document.getElementById('cityInput');
@@ -206,23 +207,15 @@
         if (!city) return;
         btn.innerText = "QUERYING...";
         try {
-            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`, {
-                headers: { 'User-Agent': 'LoomApp/4.0' }
-            });
+            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`, { headers: { 'User-Agent': 'LoomApp/5.0' } });
             const data = await resp.json();
             if (data && data.length > 0) {
                 const res = data[0];
                 let offset = Math.round(parseFloat(res.lon) / 15 * 2) / 2;
                 const name = res.display_name.split(',')[0];
-                
-                let tzLabel = getTZName(offset);
-
-                await _supabase.from('locations').upsert([{
-                    name: name, code: name.substring(0,3).toUpperCase(), lat: parseFloat(res.lat), lon: parseFloat(res.lon),
-                    utc_offset: offset, tz: tzLabel
-                }]);
+                await _supabase.from('locations').upsert([{ name, code: name.substring(0,3).toUpperCase(), lat: parseFloat(res.lat), lon: parseFloat(res.lon), utc_offset: offset, tz: getTZName(offset) }]);
                 cityInput.value = '';
-                await loadData();
+                loadData();
             }
         } catch (e) { console.error(e); } finally { btn.innerText = "ADD OFFICE"; }
     }
@@ -230,7 +223,7 @@
     async function removeLocation(name) {
         if(!confirm(`Delete ${name} office?`)) return;
         await _supabase.from('locations').delete().eq('name', name);
-        await loadData();
+        loadData();
     }
 
     async function addMember() {
@@ -239,15 +232,16 @@
         if (name && loc) {
             await _supabase.from('teammates').insert([{ name, location_name: loc }]);
             document.getElementById('newName').value = '';
-            await loadData();
+            loadData();
         }
     }
 
     async function removeMember(dbId) {
         await _supabase.from('teammates').delete().eq('id', dbId);
-        await loadData();
+        loadData();
     }
 
+    // UI RENDER HELPERS
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc');
         sel.innerHTML = '';
@@ -285,7 +279,6 @@
         
         let totalMates = team.length;
         let availableMates = 0;
-
         const currentOffset = - (new Date().getTimezoneOffset() / 60);
 
         const tzGroups = {};
@@ -319,30 +312,12 @@
                 const data = locationData[loc];
                 const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (data.offset * 3600000));
                 const matesInLoc = team.filter(m => m.loc === loc);
-                
-                tzHtml += `<div class="location-card">
-                    <div class="loc-header">
-                        <span class="loc-name">${loc}</span>
-                        <div class="loc-right">
-                            <span class="loc-time">${localTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</span>
-                            <span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span>
-                        </div>
-                    </div>`;
-                
+                tzHtml += `<div class="location-card"><div class="loc-header"><span class="loc-name">${loc}</span><div class="loc-right"><span class="loc-time">${localTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div></div>`;
                 matesInLoc.forEach(m => { 
                     const hr = localTime.getHours();
                     const s = getStatusInfo(hr);
                     if(s.isWork) availableMates++;
-                    tzHtml += `<div class="member-row">
-                        <div class="member-left-side">
-                            <span class="status-dot" style="background:${s.color}"></span>
-                            <span>${m.name}</span>
-                        </div>
-                        <div class="member-right-side">
-                            <span style="font-size:1rem;">${s.emoji}</span>
-                            <span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span>
-                        </div>
-                    </div>`; 
+                    tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div class="member-right-side"><span style="font-size:1rem;">${s.emoji}</span><span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
             });
@@ -376,63 +351,45 @@
         const markers = document.getElementById('marker-layer');
         night.innerHTML = ''; lines.innerHTML = ''; labels.innerHTML = ''; text.innerHTML = ''; markers.innerHTML = '';
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
-
         for(let i = 0; i < 24; i++) {
             const lon = (i * 15) - 180;
             const x = (lon + 180) * (2.222);
             const bandHour = (24 + utcHour + (lon/15)) % 24;
             const hrInt = Math.floor(bandHour);
-
             if (hrInt < 6 || hrInt >= 18) {
                 const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 rect.setAttribute("x", x); rect.setAttribute("y", 0); rect.setAttribute("width", 33.4); rect.setAttribute("height", 400);
                 rect.setAttribute("fill", "var(--night-wash)"); night.appendChild(rect);
             }
-
             const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             line.setAttribute("x1", x); line.setAttribute("y1", 0); line.setAttribute("x2", x); line.setAttribute("y2", 400);
             line.setAttribute("class", "grid-line");
-
-            if (hrInt === 9) { 
-                line.setAttribute("stroke", "var(--status-work)"); lines.appendChild(line);
-                addNeedleLabel(x, "Work Start", "var(--status-work)", labels);
-            } else if (hrInt === 17) {
-                line.setAttribute("stroke", "var(--status-work)"); lines.appendChild(line);
-                addNeedleLabel(x, "Work End", "var(--status-work)", labels);
-            } else if (hrInt === 13) {
-                line.setAttribute("stroke", "var(--status-lunch)"); lines.appendChild(line);
-                addNeedleLabel(x, "Lunch", "var(--status-lunch)", labels);
-            } else if (hrInt === 14) {
-                line.setAttribute("stroke", "var(--status-lunch)"); lines.appendChild(line);
-            } else if (hrInt === 22) {
-                line.setAttribute("stroke", "var(--status-snooze)"); lines.appendChild(line);
-                addNeedleLabel(x, "Snooze", "var(--status-snooze)", labels);
-            } else if (hrInt === 7) {
-                line.setAttribute("stroke", "var(--status-snooze)"); lines.appendChild(line);
-            }
-
+            if (hrInt === 9) { line.setAttribute("stroke", "var(--status-work)"); lines.appendChild(line); addNeedleLabel(x, "Work Start", "var(--status-work)", labels); }
+            else if (hrInt === 17) { line.setAttribute("stroke", "var(--status-work)"); lines.appendChild(line); addNeedleLabel(x, "Work End", "var(--status-work)", labels); }
+            else if (hrInt === 13) { line.setAttribute("stroke", "var(--status-lunch)"); lines.appendChild(line); addNeedleLabel(x, "Lunch", "var(--status-lunch)", labels); }
+            else if (hrInt === 14) { line.setAttribute("stroke", "var(--status-lunch)"); lines.appendChild(line); }
+            else if (hrInt === 22) { line.setAttribute("stroke", "var(--status-snooze)"); lines.appendChild(line); addNeedleLabel(x, "Snooze", "var(--status-snooze)", labels); }
+            else if (hrInt === 7) { line.setAttribute("stroke", "var(--status-snooze)"); lines.appendChild(line); }
             if(i % 4 === 0) {
                 const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 t.setAttribute("x", x + 5); t.setAttribute("y", 15); t.setAttribute("class", "time-marker-txt");
                 t.textContent = `${hrInt}:00`; text.appendChild(t);
             }
         }
-
         Object.keys(locationData).forEach(loc => {
             const d = locationData[loc];
             const px = (d.lon + 180) * (2.222); const py = (90 - d.lat) * (2.222);
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py);
-            dot.setAttribute("r", 3); dot.setAttribute("class", "pin");
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 3); dot.setAttribute("class", "pin");
             markers.appendChild(dot);
             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            txt.setAttribute("x", px + 8); txt.setAttribute("y", py + 3);
-            txt.setAttribute("class", "pin-lbl"); txt.textContent = d.code;
+            txt.setAttribute("x", px + 8); txt.setAttribute("y", py + 3); txt.setAttribute("class", "pin-lbl"); txt.textContent = d.code;
             markers.appendChild(txt);
         });
     }
 
-    loadData(); sync(); resetToLive();
+    checkSession();
+    sync();
     setInterval(() => { if(!isFitMode) render(); }, 30000);
 </script>
 </body>
