@@ -64,7 +64,6 @@
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.2rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
         .btn-signup { background: var(--slack-green); color: white; margin-top: 10px; }
-        .btn-main:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
         #auth-status { font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; font-weight: bold; color: var(--status-snooze); }
 
@@ -81,19 +80,19 @@
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
         .tz-header { padding: 8px 15px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
         
-        .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; }
+        .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
         .loc-header { padding: 10px 15px 10px 25px; display: flex; justify-content: space-between; align-items: center; }
         .loc-name { font-weight: 700; font-size: 0.85rem; }
         .loc-time { font-family: "Monaco", monospace; font-size: 0.8rem; color: #D1D2D3; }
         
-        /* Delete button visibility logic */
-        .btn-standard-del { cursor: pointer; opacity: 0; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: all 0.2s; margin-left: 8px; }
+        /* Delete logic refined for strict hover */
+        .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: opacity 0.2s; }
         .location-card:hover .btn-standard-del, 
-        .member-row:hover .btn-standard-del { opacity: 1; }
-        .btn-standard-del:hover { color: white; }
+        .member-row:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
 
-        .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; position: relative; }
+        .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
         .member-left-side { display: flex; align-items: center; color: #fff; }
+        .member-right-side { display: flex; align-items: center; gap: 8px; }
         .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 10px; }
 
         /* --- Map Area --- */
@@ -175,7 +174,7 @@
         <button class="btn-main" style="width:auto; padding: 10px 20px; background:#f0f0f0; color:#333; font-size: 0.85rem;" onclick="resetToLive()">Live Sync</button>
         <div style="border-left:1px solid #ddd; padding-left:20px; text-align:center;">
             <div id="predictVal" class="acceptance-val">0%</div>
-            <div style="font-size:0.55rem; text-transform:uppercase; color:#888; font-weight:800;">Acceptance</div>
+            <div style="font-size:0.55rem; text-transform:uppercase; color:#888; font-weight:800;">Harmony</div>
         </div>
     </div>
 </div>
@@ -193,7 +192,7 @@
     const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
     function getTZName(offset) { return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
 
-    // --- Authentication ---
+    // --- Auth ---
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
@@ -256,7 +255,7 @@
     function getStatus(hr) {
         if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, label: "Snoozing" };
         if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true, label: "Lunch" };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true, label: "Working" };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--status-work)", work: true, label: "Working" };
         return { emoji: "🏠", color: "var(--slack-blue)", work: false, label: "Off" };
     }
 
@@ -265,7 +264,6 @@
         const ref = isFitMode ? workDate : new Date();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         let total = team.length, available = 0;
-        const currentOffset = - (new Date().getTimezoneOffset() / 60);
         const groups = {};
         Object.keys(locationData).forEach(name => { const tz = locationData[name].tz; if(!groups[tz]) groups[tz] = []; groups[tz].push(name); });
 
@@ -280,7 +278,8 @@
                 mates.forEach(m => { 
                     const s = getStatus(localTime.getHours());
                     if(s.work) available++;
-                    tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name} ${s.emoji}</span></div><span class="btn-standard-del" onclick="removeMember('${m.id}')" style="opacity:0.3">×</span></div>`; 
+                    // Refined emoji placement toFar-Right
+                    tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div class="member-right-side"><span>${s.emoji}</span><span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
             });
