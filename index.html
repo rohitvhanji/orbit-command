@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Loom | Weaving Scheduling Harmony</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -22,10 +22,11 @@
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: white; color: var(--text-dark);
-            margin: 0; display: flex; height: 100vh; overflow: hidden;
+            overflow: hidden;
         }
 
         /* --- Auth Homepage Overlay --- */
@@ -33,7 +34,7 @@
             position: fixed; inset: 0; 
             background: var(--loom-gradient);
             z-index: 2000; display: flex; align-items: center; justify-content: center;
-            padding: 0 10%; overflow: hidden;
+            padding: 20px; overflow-y: auto;
         }
 
         .bg-mesh {
@@ -46,75 +47,91 @@
 
         .hero-container {
             display: flex; width: 100%; max-width: 1100px;
-            align-items: center; justify-content: space-between; gap: 60px;
+            align-items: center; justify-content: space-between; gap: 40px;
             position: relative; z-index: 2;
         }
 
         .brand-section { flex: 1.2; text-align: left; color: white; }
-        .brand-section h1 { color: white; font-size: 5.5rem; font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
-        .brand-section p { font-size: 1.8rem; line-height: 1.2; color: rgba(255,255,255,0.9); margin-top: 20px; font-weight: 400; }
+        .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
+        .brand-section p { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.9); margin-top: 20px; font-weight: 400; }
 
         .auth-card {
-            flex: 0.85; background: white; padding: 40px; border-radius: 12px;
+            flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            text-align: center; display: flex; flex-direction: column; gap: 15px;
+            text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px;
         }
 
-        .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1.05rem; outline: none; }
-        .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.2rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
+        .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
+        .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
         .btn-login { background: var(--slack-purple); color: white; }
         .btn-signup { background: var(--slack-green); color: white; margin-top: 10px; }
 
-        #auth-status { font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; font-weight: bold; color: var(--status-snooze); }
+        /* --- Mobile View Switcher --- */
+        #view-switcher {
+            display: none; height: 50px; background: var(--slack-navy); color: white;
+            justify-content: space-around; align-items: center; z-index: 1001;
+        }
+        .view-tab { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 800; opacity: 0.6; text-transform: uppercase; cursor: pointer; padding: 15px 0; }
+        .view-tab.active { opacity: 1; border-bottom: 3px solid white; }
 
-        /* --- Sidebar --- */
-        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header { padding: 18px; background: var(--slack-navy); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;}
+        /* --- Sidebar & Layout --- */
+        #app-shell { display: flex; height: 100%; width: 100%; }
+        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center;}
         .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: white; text-transform: uppercase; }
         
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 0.5px;}
-        .mgmt-input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 0.8rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; margin-bottom: 6px; }
+        .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .mgmt-input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid transparent; color: white; border-radius: 4px; margin-bottom: 6px; }
         
-        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 80px; }
+        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
-        .tz-header { padding: 8px 15px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .tz-header { padding: 8px 15px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; }
         
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .loc-header { padding: 10px 15px 10px 25px; display: flex; justify-content: space-between; align-items: center; }
-        .loc-name { font-weight: 700; font-size: 0.85rem; }
-        .loc-time { font-family: "Monaco", monospace; font-size: 0.8rem; color: #D1D2D3; }
+        .loc-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 700; }
         
-        /* HOVER DELETE LOGIC: STRICT SCOPING */
-        .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: opacity 0.2s; }
-        
-        /* Only show office delete when hovering the header */
-        .loc-header:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
-        /* Only show member delete when hovering the member row */
-        .member-row:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
-        
-        .btn-standard-del:hover { color: white; }
+        .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.2rem; color: rgba(255,255,255,0.4); padding: 0 5px; }
+        .loc-header:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
 
-        .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
-        .member-left-side { display: flex; align-items: center; color: #fff; }
-        .member-right-side { display: flex; align-items: center; gap: 8px; }
-        .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+        .member-row { padding: 8px 15px 8px 30px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
 
         /* --- Map Area --- */
-        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
-        #map-area { flex-grow: 1; position: relative; overflow: hidden; }
-        #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.4) brightness(1.1); }
+        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; }
+        #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
+        #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         
-        .grid-line { stroke-width: 2.5; opacity: 0.8; }
-        .map-label-text { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; paint-order: stroke; stroke: white; stroke-width: 2.5px; }
-        .time-marker-txt { font-size: 11px; fill: var(--text-dark); font-weight: 900; opacity: 0.6; }
-        .pin { fill: var(--slack-purple); stroke: white; stroke-width: 1.5; }
+        .map-label-text { font-size: 10px; font-weight: 900; text-transform: uppercase; paint-order: stroke; stroke: white; stroke-width: 2.5px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
 
-        #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 30px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 20px; align-items: center; justify-content: center; z-index: 1000; }
-        .sched-control { border: 1px solid var(--slack-border); padding: 5px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
-        .acceptance-val { font-size: 1.2rem; font-weight: 900; }
+        #scheduler { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            padding: 12px; background: rgba(255,255,255,0.98); 
+            border-top: 1px solid var(--slack-border); display: flex; 
+            gap: 10px; align-items: center; justify-content: center; z-index: 1000;
+            flex-wrap: wrap;
+        }
+        .sched-control { border: 1px solid var(--slack-border); padding: 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+
+        /* --- Media Queries for Mobile --- */
+        @media (max-width: 768px) {
+            .hero-container { flex-direction: column; text-align: center; gap: 20px; }
+            .brand-section { text-align: center; }
+            .brand-section p { margin-bottom: 20px; }
+            
+            #view-switcher { display: flex; }
+            #sidebar { 
+                position: absolute; width: 100%; height: calc(100% - 50px); top: 50px; left: 0; 
+                display: none; z-index: 1000; 
+            }
+            #sidebar.mobile-active { display: flex; }
+            #main-view-container { height: calc(100% - 50px); }
+            
+            #scheduler { padding-bottom: 25px; }
+            .btn-main { padding: 12px; font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -132,56 +149,63 @@
             <button class="btn-main btn-login" onclick="handleAuth('login')">Login to Loom</button>
             <div style="text-align: center; color: #bbb; margin: 5px 0; font-size: 0.9rem;">— or —</div>
             <button class="btn-main btn-signup" onclick="handleAuth('signup')">Start Weaving</button>
-            <div id="auth-status"></div>
-            <p style="font-size: 0.85rem; color: #666; margin-top: 15px;">Experience effortless scheduling for your distributed team.</p>
+            <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">Experience effortless coordination for your distributed team.</p>
         </div>
     </div>
 </div>
 
-<div id="sidebar">
-    <div class="sidebar-header">
-        <h2>LOOM</h2>
-        <span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
-    </div>
-    <div class="mgmt-section">
-        <span class="mgmt-title">Add Office</span>
-        <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
-        <button class="btn-main btn-login" style="padding: 8px; font-size: 0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
-    </div>
-    <div class="mgmt-section">
-        <span class="mgmt-title">Add Teammate</span>
-        <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
-        <select id="newLoc" class="mgmt-input"></select>
-        <button class="btn-main btn-signup" style="padding: 8px; font-size: 0.8rem;" onclick="addMember()">ADD TEAMMATE</button>
-    </div>
-    <div id="member-groups"></div>
-</div>
+<nav id="view-switcher">
+    <div class="view-tab active" id="tab-roster" onclick="switchView('roster')">Roster</div>
+    <div class="view-tab" id="tab-map" onclick="switchView('map')">Map</div>
+</nav>
 
-<div id="main-view-container">
-    <div id="map-area">
-        <div id="map-bg"></div>
-        <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
-            <g id="day-night-layer"></g>
-            <g id="grid-lines-layer"></g>
-            <g id="grid-label-layer"></g>
-            <g id="time-text-layer"></g>
-            <g id="marker-layer"></g>
-        </svg>
-    </div>
-    <div id="scheduler">
-        <input type="date" id="schedDate" class="sched-control" onchange="validate()">
-        <div style="display:flex; align-items:center; gap:5px;">
-            <input type="text" id="hourVal" class="sched-control" style="width:35px; text-align:center" placeholder="HH" onblur="validate()">
-            <b>:</b>
-            <input type="text" id="minVal" class="sched-control" style="width:35px; text-align:center" placeholder="MM" onblur="validate()">
+<div id="app-shell">
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h2>LOOM</h2>
+            <span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
         </div>
-        <button class="btn-main btn-login" style="width:auto; padding: 10px 20px; font-size: 0.85rem;" onclick="setFitMode(true)">Simulate Window</button>
-        <button class="btn-main" style="width:auto; padding: 10px 20px; background:#f0f0f0; color:#333; font-size: 0.85rem;" onclick="resetToLive()">Live Sync</button>
-        <div style="border-left:1px solid #ddd; padding-left:20px; text-align:center;">
-            <div id="predictVal" class="acceptance-val">0%</div>
-            <div style="font-size:0.55rem; text-transform:uppercase; color:#888; font-weight:800;">Harmony</div>
+        <div class="mgmt-section">
+            <span class="mgmt-title">Add Office</span>
+            <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
+            <button class="btn-main btn-login" style="padding: 10px; font-size: 0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
         </div>
-    </div>
+        <div class="mgmt-section">
+            <span class="mgmt-title">Add Teammate</span>
+            <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
+            <select id="newLoc" class="mgmt-input" style="background: rgba(255,255,255,0.15);"></select>
+            <button class="btn-main btn-signup" style="padding: 10px; font-size: 0.8rem;" onclick="addMember()">ADD TEAMMATE</button>
+        </div>
+        <div id="member-groups"></div>
+    </aside>
+
+    <main id="main-view-container">
+        <div id="map-area">
+            <div id="map-bg"></div>
+            <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
+                <g id="day-night-layer"></g>
+                <g id="grid-lines-layer"></g>
+                <g id="grid-label-layer"></g>
+                <g id="time-text-layer"></g>
+                <g id="marker-layer"></g>
+            </svg>
+        </div>
+        <footer id="scheduler">
+            <input type="date" id="schedDate" class="sched-control" onchange="validate()">
+            <div style="display:flex; align-items:center; gap:5px;">
+                <input type="number" id="hourVal" class="sched-control" style="width:45px;" placeholder="HH" onblur="validate()">
+                <b>:</b>
+                <input type="number" id="minVal" class="sched-control" style="width:45px;" placeholder="MM" onblur="validate()">
+            </div>
+            <button class="btn-main btn-login" style="width:auto; padding: 10px 15px; font-size: 0.75rem;" onclick="setFitMode(true)">SIMULATE</button>
+            <button class="btn-main" style="width:auto; padding: 10px 15px; background:#f0f0f0; color:#333; font-size: 0.75rem;" onclick="resetToLive()">LIVE</button>
+            <div style="border-left:1px solid #ddd; padding-left:15px; text-align:center;">
+                <div id="predictVal" style="font-size:1.1rem; font-weight:900;">0%</div>
+                <div style="font-size:0.5rem; text-transform:uppercase; color:#888; font-weight:800;">Harmony</div>
+            </div>
+        </footer>
+    </main>
 </div>
 
 <script>
@@ -194,20 +218,27 @@
     let isFitMode = false;
     let workDate = new Date();
 
-    const TZ_MAP = { 
-        "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-5.5": "EST", 
-        "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", 
-        "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", 
-        "10": "AEST", "11": "AEDT" 
-    };
+    const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-5.5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
+    function getTZName(offset) { const s = offset.toString(); return TZ_MAP[s] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
 
-    function getTZName(offset) { 
-        // Fixed: Explicit check for Indianapolis/US Eastern range
-        const s = offset.toString();
-        if (TZ_MAP[s]) return TZ_MAP[s];
-        return (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`);
+    // --- Mobile Switcher Logic ---
+    function switchView(view) {
+        const sidebar = document.getElementById('sidebar');
+        const rosterTab = document.getElementById('tab-roster');
+        const mapTab = document.getElementById('tab-map');
+        
+        if (view === 'roster') {
+            sidebar.classList.add('mobile-active');
+            rosterTab.classList.add('active');
+            mapTab.classList.remove('active');
+        } else {
+            sidebar.classList.remove('mobile-active');
+            mapTab.classList.add('active');
+            rosterTab.classList.remove('active');
+        }
     }
 
+    // --- Auth ---
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
@@ -220,6 +251,7 @@
     }
     async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
+    // --- Data Management ---
     async function loadData() {
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
@@ -267,28 +299,27 @@
     }
 
     function getStatus(hr) {
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, label: "Snooze" };
-        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true, label: "Lunch" };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--status-work)", work: true, label: "Working" };
-        return { emoji: "🏠", color: "var(--slack-blue)", work: false, label: "Off" };
+        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
+        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
+        return { emoji: "🏠", color: "var(--slack-blue)", work: false };
     }
 
     function render() {
         const ref = isFitMode ? workDate : new Date();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         let total = team.length, available = 0;
-        const currentOffset = - (new Date().getTimezoneOffset() / 60);
         const groups = {};
         Object.keys(locationData).forEach(name => { const tz = locationData[name].tz; if(!groups[tz]) groups[tz] = []; groups[tz].push(name); });
 
         Object.keys(groups).sort().forEach(tz => {
             const sampleTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (locationData[groups[tz][0]].offset * 3600000));
             const status = getStatus(sampleTime.getHours());
-            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tz}</span><span>${status.label}</span></div>`;
+            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tz}</span><span>${sampleTime.getHours().toString().padStart(2,'0')}:00</span></div>`;
             groups[tz].forEach(loc => {
                 const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (locationData[loc].offset * 3600000));
                 const mates = team.filter(m => m.loc === loc);
-                tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><div class="loc-right"><span class="loc-time">${localTime.getHours().toString().padStart(2,'0')}:${localTime.getMinutes().toString().padStart(2,'0')}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div></div>`;
+                tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
                     const s = getStatus(localTime.getHours());
                     if(s.work) available++;
@@ -308,8 +339,7 @@
         const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
         line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
         line.setAttribute("stroke", color); line.setAttribute("stroke-width", "2"); line.setAttribute("stroke-dasharray", "4");
-        txt.setAttribute("x", x + 5); txt.setAttribute("y", 20);
-        txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
+        txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
         txt.textContent = text;
         g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
     }
@@ -363,7 +393,6 @@
     }
     function resetToLive() { isFitMode = false; workDate = new Date(); render(); }
     checkSession();
-    setInterval(() => { if(!isFitMode) render(); }, 30000);
 </script>
 </body>
 </html>
