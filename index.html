@@ -64,14 +64,14 @@
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.2rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
         .btn-signup { background: var(--slack-green); color: white; margin-top: 10px; }
+        .btn-main:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
         #auth-status { font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; font-weight: bold; color: var(--status-snooze); }
 
-        /* --- Sidebar Architecture --- */
+        /* --- Sidebar --- */
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header { padding: 18px; background: var(--slack-navy); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;}
         .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: white; text-transform: uppercase; }
-        .logout-link { font-size: 0.7rem; color: #D1D2D3; cursor: pointer; text-decoration: underline; opacity: 0.7; }
         
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 0.5px;}
@@ -79,18 +79,20 @@
         
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 80px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
-        .tz-header { padding: 8px 15px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .home-tag { font-size: 0.55rem; background: var(--slack-blue); padding: 1px 5px; border-radius: 4px; color: white; margin-left: 5px; }
+        .tz-header { padding: 8px 15px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
         
-        .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; }
         .loc-header { padding: 10px 15px 10px 25px; display: flex; justify-content: space-between; align-items: center; }
         .loc-name { font-weight: 700; font-size: 0.85rem; }
         .loc-time { font-family: "Monaco", monospace; font-size: 0.8rem; color: #D1D2D3; }
         
-        .btn-standard-del { cursor: pointer; opacity: 0; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: all 0.2s; }
-        .location-card:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; }
+        /* Delete button visibility logic */
+        .btn-standard-del { cursor: pointer; opacity: 0; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: all 0.2s; margin-left: 8px; }
+        .location-card:hover .btn-standard-del, 
+        .member-row:hover .btn-standard-del { opacity: 1; }
+        .btn-standard-del:hover { color: white; }
 
-        .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
+        .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; position: relative; }
         .member-left-side { display: flex; align-items: center; color: #fff; }
         .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 10px; }
 
@@ -138,15 +140,15 @@
         <span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
     </div>
     <div class="mgmt-section">
-        <span class="mgmt-title">Global Nodes</span>
-        <input type="text" id="cityInput" class="mgmt-input" placeholder="Add City City...">
-        <button class="btn-main btn-login" style="padding: 8px; font-size: 0.8rem;" onclick="lookupCity()">Add Office</button>
+        <span class="mgmt-title">Add Office</span>
+        <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
+        <button class="btn-main btn-login" style="padding: 8px; font-size: 0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
     </div>
     <div class="mgmt-section">
-        <span class="mgmt-title">Personnel</span>
+        <span class="mgmt-title">Add Teammate</span>
         <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
         <select id="newLoc" class="mgmt-input"></select>
-        <button class="btn-main btn-signup" style="padding: 8px; font-size: 0.8rem;" onclick="addMember()">Add Teammate</button>
+        <button class="btn-main btn-signup" style="padding: 8px; font-size: 0.8rem;" onclick="addMember()">ADD TEAMMATE</button>
     </div>
     <div id="member-groups"></div>
 </div>
@@ -191,7 +193,7 @@
     const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
     function getTZName(offset) { return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
 
-    // --- Auth ---
+    // --- Authentication ---
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
@@ -254,7 +256,7 @@
     function getStatus(hr) {
         if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, label: "Snoozing" };
         if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true, label: "Lunch" };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--status-work)", work: true, label: "Working" };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true, label: "Working" };
         return { emoji: "🏠", color: "var(--slack-blue)", work: false, label: "Off" };
     }
 
@@ -278,7 +280,7 @@
                 mates.forEach(m => { 
                     const s = getStatus(localTime.getHours());
                     if(s.work) available++;
-                    tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div class="member-right-side"><span>${s.emoji}</span><span onclick="removeMember('${m.id}')" style="cursor:pointer; opacity:0.3; margin-left:10px;">×</span></div></div>`; 
+                    tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name} ${s.emoji}</span></div><span class="btn-standard-del" onclick="removeMember('${m.id}')" style="opacity:0.3">×</span></div>`; 
                 });
                 tzHtml += `</div>`;
             });
@@ -316,7 +318,6 @@
                 r.setAttribute("x", x); r.setAttribute("y", 0); r.setAttribute("width", 33.4); r.setAttribute("height", 400);
                 r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r);
             }
-            // Add Restored Vertical Indicators
             if (hrInt === 9) addNeedleLabel(x, "WORK START", "var(--slack-green)", labels);
             else if (hrInt === 13) addNeedleLabel(x, "LUNCH", "#ECB22E", labels);
             else if (hrInt === 17) addNeedleLabel(x, "WORK END", "var(--slack-green)", labels);
@@ -328,7 +329,6 @@
                 t.textContent = `${hrInt}:00`; text.appendChild(t);
             }
         }
-        // Restored Pins and Labels
         Object.keys(locationData).forEach(loc => {
             const d = locationData[loc];
             const px = (d.lon + 180) * (2.222); const py = (90 - d.lat) * (2.222);
