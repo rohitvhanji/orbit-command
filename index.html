@@ -85,10 +85,15 @@
         .loc-name { font-weight: 700; font-size: 0.85rem; }
         .loc-time { font-family: "Monaco", monospace; font-size: 0.8rem; color: #D1D2D3; }
         
-        /* Delete logic refined for strict hover */
+        /* HOVER DELETE LOGIC: STRICT SCOPING */
         .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.1rem; color: rgba(255,255,255,0.4); transition: opacity 0.2s; }
-        .location-card:hover .btn-standard-del, 
+        
+        /* Only show office delete when hovering the header */
+        .loc-header:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
+        /* Only show member delete when hovering the member row */
         .member-row:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
+        
+        .btn-standard-del:hover { color: white; }
 
         .member-row { padding: 6px 15px 6px 35px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; }
         .member-left-side { display: flex; align-items: center; color: #fff; }
@@ -170,7 +175,7 @@
             <b>:</b>
             <input type="text" id="minVal" class="sched-control" style="width:35px; text-align:center" placeholder="MM" onblur="validate()">
         </div>
-        <button class="btn-main btn-login" style="width:auto; padding: 10px 20px; font-size: 0.85rem;" onclick="setFitMode(true)">Simulate Slot</button>
+        <button class="btn-main btn-login" style="width:auto; padding: 10px 20px; font-size: 0.85rem;" onclick="setFitMode(true)">Simulate Window</button>
         <button class="btn-main" style="width:auto; padding: 10px 20px; background:#f0f0f0; color:#333; font-size: 0.85rem;" onclick="resetToLive()">Live Sync</button>
         <div style="border-left:1px solid #ddd; padding-left:20px; text-align:center;">
             <div id="predictVal" class="acceptance-val">0%</div>
@@ -189,10 +194,20 @@
     let isFitMode = false;
     let workDate = new Date();
 
-    const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
-    function getTZName(offset) { return TZ_MAP[offset.toString()] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
+    const TZ_MAP = { 
+        "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-5.5": "EST", 
+        "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", 
+        "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", 
+        "10": "AEST", "11": "AEDT" 
+    };
 
-    // --- Auth ---
+    function getTZName(offset) { 
+        // Fixed: Explicit check for Indianapolis/US Eastern range
+        const s = offset.toString();
+        if (TZ_MAP[s]) return TZ_MAP[s];
+        return (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`);
+    }
+
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
@@ -205,7 +220,6 @@
     }
     async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
-    // --- Data ---
     async function loadData() {
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
@@ -253,17 +267,17 @@
     }
 
     function getStatus(hr) {
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, label: "Snoozing" };
+        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, label: "Snooze" };
         if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true, label: "Lunch" };
         if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--status-work)", work: true, label: "Working" };
         return { emoji: "🏠", color: "var(--slack-blue)", work: false, label: "Off" };
     }
 
-    // --- Render Logic ---
     function render() {
         const ref = isFitMode ? workDate : new Date();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         let total = team.length, available = 0;
+        const currentOffset = - (new Date().getTimezoneOffset() / 60);
         const groups = {};
         Object.keys(locationData).forEach(name => { const tz = locationData[name].tz; if(!groups[tz]) groups[tz] = []; groups[tz].push(name); });
 
@@ -278,7 +292,6 @@
                 mates.forEach(m => { 
                     const s = getStatus(localTime.getHours());
                     if(s.work) available++;
-                    // Refined emoji placement toFar-Right
                     tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div class="member-right-side"><span>${s.emoji}</span><span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
