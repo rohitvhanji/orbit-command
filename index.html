@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orbit | Global Team Sync</title>
+    <style>
+        :root {
+            --sf-blue: #0176D3;
+            --sf-navy: #032D60;
+            --sf-bg: #F3F3F2;
+            --sf-border: #DDDBDA;
+            --sf-text: #181818;
+            --night-overlay: rgba(3, 45, 96, 0.45);
+            --success: #2E844A;
+            --warning: #B78100;
+            --error: #BA0517;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--sf-bg);
+            margin: 0; display: flex; height: 100vh; overflow: hidden;
+        }
+
+        #sidebar {
+            width: 280px; background: white; border-right: 1px solid var(--sf-border);
+            display: flex; flex-direction: column; z-index: 100;
+        }
+        .sidebar-header { padding: 15px; background: var(--sf-navy); color: white; }
+        .sidebar-header h2 { margin: 0; font-size: 0.9rem; letter-spacing: 1px; }
+
+        #member-groups { padding: 10px; overflow-y: auto; flex-grow: 1; }
+        .location-group { margin-bottom: 8px; border: 1px solid var(--sf-border); border-radius: 4px; overflow: hidden; }
+        
+        .location-header { 
+            background: #FAFAF9; padding: 5px 8px; font-weight: 700; font-size: 0.75rem; 
+            display: flex; justify-content: space-between; border-bottom: 1px solid var(--sf-border);
+        }
+        .header-code { color: var(--sf-blue); font-size: 0.65rem; }
+        
+        .member-row { padding: 3px 10px; font-size: 0.7rem; display: flex; justify-content: space-between; }
+
+        .status-green { border-left: 3px solid var(--success); }
+        .status-yellow { border-left: 3px solid var(--warning); }
+        .status-red { border-left: 3px solid var(--error); }
+
+        #main-view { 
+            flex-grow: 1; position: relative; 
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg');
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+        }
+        #svg-map { width: 100%; height: 100%; }
+
+        .grid-text { font-size: 9px; fill: white; font-weight: bold; text-shadow: 1px 1px 2px black; }
+        .pin { fill: #FF3B30; stroke: white; stroke-width: 0.5; }
+        .label-txt { 
+            font-size: 7px; font-weight: 900; fill: #fff; 
+            text-shadow: 1px 1px 1px black, -1px -1px 1px black; 
+        }
+
+        #scheduler { 
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: white; height: 40px; border-top: 1px solid var(--sf-border);
+            display: flex; gap: 10px; align-items: center; justify-content: center;
+        }
+        .btn-sf { background: var(--sf-blue); color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 0.7rem; }
+    </style>
+</head>
+<body onkeydown="handleKeys(event)">
+
+<div id="sidebar">
+    <div class="sidebar-header"><h2>ORBIT SYNC</h2></div>
+    <div id="member-groups"></div>
+</div>
+
+<div id="main-view">
+    <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
+        <g id="solar-layer"></g>
+        <g id="grid-layer"></g>
+        <g id="marker-layer"></g>
+    </svg>
+
+    <div id="scheduler">
+        <input type="date" id="schedDate" onchange="validate()" style="font-size:0.7rem">
+        <input type="text" id="hourVal" style="width:20px; text-align:center; font-size:0.7rem;" onblur="validate()">
+        <span>:</span>
+        <input type="text" id="minVal" style="width:20px; text-align:center; font-size:0.7rem;" onblur="validate()">
+        <button class="btn-sf" onclick="isFitMode=true; render();">Overlap</button>
+        <button class="btn-sf" style="background:#666" onclick="resetToLive()">Live</button>
+    </div>
+</div>
+
+<script>
+    // Validated high-precision coordinates
+    const locationData = {
+        "Bangalore": { code: "BLR", lat: 12.9716, lon: 77.5946, zone: "Asia/Kolkata", xOff: 3, yOff: 2, align: "start" },
+        "Burlington": { code: "BTV", lat: 44.4756, lon: -73.2121, zone: "America/New_York", xOff: -2, yOff: -4, align: "end" },
+        "New York": { code: "NYC", lat: 40.7128, lon: -74.0060, zone: "America/New_York", xOff: 3, yOff: 0, align: "start" },
+        "Maryland": { code: "MD", lat: 39.0458, lon: -76.6413, zone: "America/New_York", xOff: -2, yOff: 4, align: "end" },
+        "Indianapolis": { code: "IND", lat: 39.7684, lon: -86.1581, zone: "America/New_York", xOff: -2, yOff: 0, align: "end" },
+        "Chicago": { code: "CHI", lat: 41.8781, lon: -87.6298, zone: "America/Chicago", xOff: -2, yOff: -3, align: "end" },
+        "San Francisco": { code: "SFO", lat: 37.7749, lon: -122.4194, zone: "America/Los_Angeles", xOff: -2, yOff: -2, align: "end" },
+        "Palo Alto": { code: "PAO", lat: 37.4419, lon: -122.1430, zone: "America/Los_Angeles", xOff: -2, yOff: 4, align: "end" }
+    };
+
+    let team = [
+        { name: "Ashish Seth", loc: "Palo Alto" }, { name: "Liyana Othman", loc: "San Francisco" },
+        { name: "Brenda Liem", loc: "San Francisco" }, { name: "Srikanth Subramanian", loc: "Bangalore" },
+        { name: "Avnish Gupta", loc: "Bangalore" }, { name: "Rohit Vhanji", loc: "Bangalore" },
+        { name: "Manohar MP", loc: "Bangalore" }, { name: "Erin Willingham", loc: "Chicago" },
+        { name: "Srinivas Banda", loc: "Bangalore" }, { name: "Aman Saxena", loc: "Bangalore" },
+        { name: "Sundaram Ravi", loc: "Bangalore" }, { name: "Sriram Venkataraman", loc: "Bangalore" },
+        { name: "Jon Hanson", loc: "Burlington" }, { name: "Anil Jha", loc: "Bangalore" },
+        { name: "Krishna Subbian Bala", loc: "Bangalore" }, { name: "Gene Lew", loc: "Maryland" },
+        { name: "Matt Samela", loc: "Indianapolis" }, { name: "Leslie Kramer", loc: "New York" },
+        { name: "James Slater", loc: "Chicago" }
+    ];
+
+    let isFitMode = false;
+    let workDate = new Date();
+
+    function resetToLive() { isFitMode = false; workDate = new Date(); sync(); render(); }
+    function sync() {
+        document.getElementById('schedDate').value = workDate.toISOString().split('T')[0];
+        document.getElementById('hourVal').value = workDate.getHours().toString().padStart(2,'0');
+        document.getElementById('minVal').value = (Math.round(workDate.getMinutes()/5)*5%60).toString().padStart(2,'0');
+    }
+    function adjust(m, h) { workDate.setMinutes(workDate.getMinutes()+m); workDate.setHours(workDate.getHours()+h); isFitMode=true; sync(); render(); }
+    function validate() { 
+        let h = parseInt(document.getElementById('hourVal').value) || 0;
+        let m = parseInt(document.getElementById('minVal').value) || 0;
+        workDate = new Date(`${document.getElementById('schedDate').value}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`);
+        isFitMode=true; sync(); render(); 
+    }
+    function handleKeys(e) { if(e.target.tagName==='INPUT') return; if(e.key==="ArrowUp") adjust(5,0); if(e.key==="ArrowDown") adjust(-5,0); }
+
+    function render() {
+        const ref = isFitMode ? workDate : new Date();
+        const container = document.getElementById('member-groups');
+        container.innerHTML = '';
+        const grouped = {};
+        team.forEach(m => { if(!grouped[m.loc]) grouped[m.loc] = []; grouped[m.loc].push(m); });
+        
+        Object.keys(grouped).sort().forEach(loc => {
+            const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: locationData[loc].zone }).format(ref);
+            const hr = parseInt(time.split(':')[0]);
+            let cls = hr >= 9 && hr < 17 ? "status-green" : ((hr >= 8 && hr < 9) || (hr >= 17 && hr < 20) ? "status-yellow" : "status-red");
+            
+            let html = `<div class="location-group">
+                <div class="location-header">
+                    <span>${loc} <span class="header-code">[${locationData[loc].code}]</span></span>
+                    <span>${time}</span>
+                </div>`;
+            grouped[loc].forEach(m => { html += `<div class="member-row ${cls}"><span>${m.name}</span></div>`; });
+            container.innerHTML += html + '</div>';
+        });
+        drawMap(ref);
+    }
+
+    function drawMap(refDate) {
+        const solar = document.getElementById('solar-layer');
+        const grid = document.getElementById('grid-layer');
+        const mark = document.getElementById('marker-layer');
+        solar.innerHTML = ''; grid.innerHTML = ''; mark.innerHTML = '';
+
+        const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
+
+        for(let i = 0; i < 24; i++) {
+            const lon = (i * 15) - 180;
+            const x = (lon + 180) * (800 / 360);
+            const bandHour = (24 + utcHour + (lon/15)) % 24;
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("x", x); rect.setAttribute("y", 0);
+            rect.setAttribute("width", 801/24); rect.setAttribute("height", 400);
+            rect.setAttribute("fill", (bandHour >= 6 && bandHour <= 18) ? "transparent" : "var(--night-overlay)");
+            solar.appendChild(rect);
+
+            if(i % 4 === 0) {
+                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                t.setAttribute("x", x + 2); t.setAttribute("y", 12);
+                t.setAttribute("class", "grid-text");
+                t.textContent = Math.floor(bandHour) + ":00";
+                grid.appendChild(t);
+            }
+        }
+
+        Object.keys(locationData).forEach(locName => {
+            const d = locationData[locName];
+            const px = (d.lon + 180) * (800 / 360);
+            const py = (90 - d.lat) * (400 / 180);
+
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py);
+            dot.setAttribute("r", 1.2); dot.setAttribute("class", "pin");
+            mark.appendChild(dot);
+
+            const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            txt.setAttribute("x", px + d.xOff); txt.setAttribute("y", py + d.yOff);
+            txt.setAttribute("class", "label-txt");
+            txt.setAttribute("text-anchor", d.align);
+            txt.textContent = d.code;
+            mark.appendChild(txt);
+        });
+    }
+
+    resetToLive();
+    setInterval(() => { if(!isFitMode) render(); }, 15000);
+</script>
+</body>
+</html>
