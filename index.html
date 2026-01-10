@@ -3,55 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Precision Scheduling</title>
+    <title>Loom | Interactive Heatmap Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
             --slack-green: #2EB67D; --slack-bg: #F0F2F5; --slack-border: #E2E2E2;
             --text-dark: #1D1C1D; --status-lunch: #ECB22E; --status-snooze: #E01E5A;
-            --night-wash: rgba(10, 15, 30, 0.85); 
-            --status-weekend: #888888;
+            --night-wash: rgba(10, 15, 30, 0.7); --status-weekend: #888888;
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
-        
         #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
-        
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; }
-        
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-input { width: 100%; padding: 10px; border-radius: 4px; border: none; margin-bottom: 6px; box-sizing: border-box; background: rgba(255,255,255,0.1); color: white; }
-        
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
         .tz-header { padding: 10px 15px; font-size: 0.7rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; }
-        
         .btn-hover-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; padding-left: 10px; }
         .tz-header:hover .btn-hover-del, .loc-header:hover .btn-hover-del, .member-row:hover .btn-hover-del { opacity: 1; }
-
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
         .loc-header { padding: 10px 15px 4px 15px; font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-        
         .member-row { padding: 6px 15px 6px 30px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
-        
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; height: 100%; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        
-        /* Recommendation View Styling */
-        #rec-view { display: none; flex-grow: 1; background: #f9f9f9; padding: 40px; overflow-y: auto; }
-        .rec-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .rec-score { font-weight: 900; font-size: 1.5rem; color: var(--slack-purple); }
+
+        /* Heatmap Page */
+        #rec-view { display: none; flex-grow: 1; background: #1a1a1b; padding: 25px; overflow-y: auto; color: white; }
+        .heat-row { display: flex; align-items: center; margin-bottom: 15px; }
+        .heat-label { width: 80px; font-size: 0.65rem; font-weight: 900; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .heat-grid { flex-grow: 1; display: flex; gap: 2px; }
+        .heat-box { flex: 1; height: 25px; border-radius: 2px; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
+        .heat-box:hover { border: 1px solid white; transform: scale(1.1); z-index: 5; }
+        .heat-box.active { outline: 2px solid white; outline-offset: 2px; }
+        .heat-timeline { display: flex; margin-left: 80px; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+        .time-tick { flex: 1; font-size: 0.5rem; text-align: center; opacity: 0.5; }
 
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
-        .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
         #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
     </style>
 </head>
@@ -93,10 +89,11 @@
         </div>
 
         <div id="rec-view">
-            <button onclick="toggleView('map')" style="margin-bottom:20px; padding:10px; cursor:pointer;">← Back to Map</button>
-            <h1 style="color:var(--slack-purple)">Best Meeting Times</h1>
-            <p id="rec-context" style="color:#666"></p>
-            <div id="rec-list"></div>
+            <button onclick="toggleView('map')" style="margin-bottom:20px; padding:8px 15px; cursor:pointer; background:white; color:black; border:none; border-radius:4px; font-weight:bold;">← BACK TO MAP</button>
+            <h1 style="font-size: 1.2rem; margin-bottom: 5px;">24hr Availability Heatmap</h1>
+            <p style="font-size: 0.7rem; opacity: 0.6; margin-bottom: 25px;">Click any block to update sidebar roster to that time.</p>
+            
+            <div id="heatmap-body"></div>
         </div>
 
         <footer id="scheduler">
@@ -106,14 +103,10 @@
                 <option value="00">00</option>
                 <option value="30">30</option>
             </select>
-            <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
-            <select id="durVal" style="padding:8px">
-                <option value="30">30m</option>
-                <option value="60">1h</option>
-                <option value="90">1.5h</option>
-            </select>
+            <span style="font-size:0.8rem; margin-left:10px">Dur:</span>
+            <select id="durVal" style="padding:8px"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
-            <button onclick="showRecommendations()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST TIME</button>
+            <button onclick="showHeatmap()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
             <div id="predictVal" style="font-weight:900; margin-left:15px">0% Harmony</div>
         </footer>
@@ -145,9 +138,7 @@
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
-        if(locs) locs.forEach(l => { 
-            locationData[l.name] = { id: l.id, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; 
-        });
+        if(locs) locs.forEach(l => { locationData[l.name] = l; });
         team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
         populateLocDropdown(); render();
     }
@@ -200,56 +191,77 @@
         return { emoji: "🏠", color: "var(--slack-blue)", work: false };
     }
 
+    function toggleView(v) {
+        document.getElementById('map-area').style.display = v === 'map' ? 'block' : 'none';
+        document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
+    }
+
+    function showHeatmap() {
+        const dateStr = document.getElementById('schedDate').value;
+        if(!dateStr) return alert("Select a date first.");
+        
+        const baseDate = new Date(dateStr + "T00:00:00");
+        const heatmapBody = document.getElementById('heatmap-body');
+        heatmapBody.innerHTML = '';
+
+        const tzones = [...new Set(Object.values(locationData).map(l => l.tz))];
+        
+        // Add Timeline Header
+        let timeline = `<div class="heat-timeline">`;
+        for(let h=0; h<24; h+=2) timeline += `<div class="time-tick">${h}:00</div>`;
+        timeline += `</div>`;
+        heatmapBody.innerHTML += timeline;
+
+        // Add Row for each Timezone
+        tzones.forEach(tzName => {
+            const offset = Object.values(locationData).find(l => l.tz === tzName).utc_offset;
+            let row = `<div class="heat-row"><div class="heat-label">${tzName}</div><div class="heat-grid">`;
+            for(let step=0; step<48; step++) {
+                const testDate = new Date(baseDate.getTime() + (step * 30 * 60000));
+                const local = new Date(testDate.getTime() + (testDate.getTimezoneOffset()*60000) + (offset * 3600000));
+                const s = getStatus(local);
+                row += `<div class="heat-box" style="background:${s.color}" onclick="selectHeatTime(${testDate.getTime()})"></div>`;
+            }
+            row += `</div></div>`;
+            heatmapBody.innerHTML += row;
+        });
+
+        // Add Summary/Harmony Row
+        let sumRow = `<div class="heat-row" style="margin-top:20px;"><div class="heat-label">HARMONY</div><div class="heat-grid">`;
+        for(let step=0; step<48; step++) {
+            const testDate = new Date(baseDate.getTime() + (step * 30 * 60000));
+            const harmony = calculateHarmony(testDate);
+            const color = harmony > 75 ? 'var(--slack-green)' : harmony > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
+            sumRow += `<div class="heat-box" style="background:${color}; height:10px;" onclick="selectHeatTime(${testDate.getTime()})"></div>`;
+        }
+        sumRow += `</div></div>`;
+        heatmapBody.innerHTML += sumRow;
+
+        toggleView('rec');
+    }
+
+    function selectHeatTime(ts) {
+        workDate = new Date(ts);
+        isFitMode = true;
+        // Update input UI to match
+        document.getElementById('hourVal').value = workDate.getHours();
+        document.getElementById('minVal').value = workDate.getMinutes() === 30 ? "30" : "00";
+        render();
+        // Optional: toggleView('map'); // Uncomment if you want to jump back immediately
+    }
+
     function calculateHarmony(refTime) {
-        if (team.length === 0) return 0;
-        let available = 0;
-        const utcGroundZero = refTime.getTime() + (refTime.getTimezoneOffset() * 60000);
+        if (!team.length) return 0;
+        let active = 0;
+        const utcZ = refTime.getTime() + (refTime.getTimezoneOffset() * 60000);
         team.forEach(m => {
             const loc = locationData[m.loc];
             if (loc) {
-                const mateLocalTime = new Date(utcGroundZero + (loc.offset * 3600000));
-                if (getStatus(mateLocalTime).work) available++;
+                const local = new Date(utcZ + (loc.utc_offset * 3600000));
+                if (getStatus(local).work) active++;
             }
         });
-        return Math.round((available / team.length) * 100);
-    }
-
-    function toggleView(view) {
-        document.getElementById('map-area').style.display = view === 'map' ? 'block' : 'none';
-        document.getElementById('rec-view').style.display = view === 'rec' ? 'block' : 'none';
-    }
-
-    function showRecommendations() {
-        const duration = parseInt(document.getElementById('durVal').value);
-        const start = new Date();
-        const results = [];
-
-        for (let i = 0; i < 48; i++) { // Check next 24 hours in 30min steps
-            const testTime = new Date(start.getTime() + (i * 30 * 60000));
-            const score = calculateHarmony(testTime);
-            results.push({ time: testTime, score: score });
-        }
-
-        const sorted = results.sort((a,b) => b.score - a.score).slice(0, 5);
-        
-        const list = document.getElementById('rec-list');
-        list.innerHTML = '';
-        document.getElementById('rec-context').innerText = `Scanned next 24 hours for a ${duration}m meeting.`;
-        
-        sorted.forEach(r => {
-            const card = document.createElement('div');
-            card.className = 'rec-card';
-            card.innerHTML = `
-                <div>
-                    <div style="font-weight:bold">${r.time.toLocaleDateString()}</div>
-                    <div style="font-size:1.2rem">${r.time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                </div>
-                <div class="rec-score">${r.score}%</div>
-            `;
-            list.appendChild(card);
-        });
-
-        toggleView('rec');
+        return Math.round((active / team.length) * 100);
     }
 
     function render() {
