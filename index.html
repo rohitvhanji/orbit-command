@@ -51,9 +51,6 @@
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
         .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
         .chart-tick { flex: 1; font-size: 0.55rem; text-align: center; color: #aaa; font-weight: 900; }
-        .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
-        .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
-        .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
         #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
     </style>
 </head>
@@ -86,7 +83,7 @@
             </div>
         </div>
         <footer id="scheduler">
-            <input type="date" id="schedDate" style="padding:8px">
+            <input type="date" id="schedDate" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
             <select id="minVal" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();"><option value="00">00</option><option value="30">30</option></select>
             <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
@@ -228,7 +225,7 @@
         });
 
         const dateStr = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. Currently looking at ${sorted[0].score}% Team Harmony!`;
+        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. This time maybe works for ${sorted[0].score}% of attendees!`;
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
