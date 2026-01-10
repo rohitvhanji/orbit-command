@@ -34,7 +34,6 @@
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        
         #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
         .chart-centered-content { max-width: 1200px; margin: 0 auto; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
@@ -72,7 +71,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST (Your Local Time)</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST Reference</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -107,7 +106,7 @@
     let locationData = {}; let team = [];
     let isFitMode = false; let isMatchViewActive = false; let workDate = new Date();
     let chartExclusions = new Set();
-    const MY_OFFSET = 5.5; // Fixed IST reference
+    const MY_OFFSET = 5.5; // Fixed IST anchor
 
     async function handleAuth() {
         const e = document.getElementById('auth-email').value;
@@ -182,7 +181,6 @@
     function buildMatchChart() {
         toggleView('rec');
         const dS = document.getElementById('schedDate').value;
-        // Anchor baseDate to IST midnight
         const bD = dS ? new Date(dS + "T00:00:00") : new Date();
         const body = document.getElementById('chart-body');
         const recSlots = document.getElementById('rec-slots');
@@ -198,15 +196,13 @@
         for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
         body.innerHTML += timeline + `</div>`;
 
-        // Calculate based on IST Reference Row
         uTzs.forEach(tzL => {
             const m = Object.values(locationData).find(l => l.tz === tzL);
             let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){
-                // Matrix logic anchored to IST top row
-                const refTime = new Date(bD.getTime() + (i * stepMs));
-                const utcForSlot = refTime.getTime() - (MY_OFFSET * 3600000);
-                const local = new Date(utcForSlot + (m.offset * 3600000));
+                const tRef = new Date(bD.getTime() + (i * stepMs));
+                const utcMs = tRef.getTime() - (MY_OFFSET * 3600000); // Back to UTC
+                const local = new Date(utcMs + (m.offset * 3600000));
                 row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
             }
             body.innerHTML += row + `</div></div>`;
@@ -235,37 +231,38 @@
             recSlots.appendChild(btn);
         });
 
-        const dL = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dL}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. This time works for roughly ${sorted[0].score}% of attendees!`;
+        const dateStr = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. This time maybe works for ${sorted[0].score}% of attendees!`;
     }
 
-    function calcMatchLogic(tRef) {
+    function calcMatchLogic(tIST) {
         const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
         if(!filtered.length) return { score: 0, color: 'var(--status-weekend)' };
-        
         let hasRed = false, allGreen = true, workCount = 0;
-        const utcForSlot = tRef.getTime() - (MY_OFFSET * 3600000);
+        const utcMs = tIST.getTime() - (MY_OFFSET * 3600000);
 
         filtered.forEach(m => {
-            const s = getStatus(new Date(utcForSlot + (locationData[m.loc].offset * 3600000)));
+            const s = getStatus(new Date(utcMs + (locationData[m.loc].offset * 3600000)));
             if(s.snooze) hasRed = true;
             if(!s.work || s.emoji === "🍱") allGreen = false;
             if(s.work) workCount++;
         });
 
         const score = Math.round((workCount / filtered.length) * 100);
-        if(hasRed) return { score, color: 'var(--status-snooze)' };
-        if(allGreen) return { score, color: 'var(--slack-green)' };
+        if(hasRed) return { score, color: 'var(--status-snooze)' }; // Snooze Priority
+        if(allGreen) return { score, color: 'var(--slack-green)' }; // All Green Priority
         return { score, color: 'var(--status-lunch)' }; // Mixed zone
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
-    function syncAndRender(t) { 
-        // Sync global time from IST reference back to internal UTC
-        workDate = new Date(t.getTime() - (MY_OFFSET * 3600000) + (new Date().getTimezoneOffset() * 60000));
+    
+    function syncAndRender(tIST) { 
+        // Anchor fix: Subtrack IST offset to update global workDate
+        const utcMs = tIST.getTime() - (MY_OFFSET * 3600000);
+        workDate = new Date(utcMs); 
         isFitMode = true; 
-        document.getElementById('hourVal').value = t.getHours(); 
-        document.getElementById('minVal').value = t.getMinutes() === 30 ? "30" : "00"; 
+        document.getElementById('hourVal').value = tIST.getHours(); 
+        document.getElementById('minVal').value = tIST.getMinutes() === 30 ? "30" : "00"; 
         render(); 
     }
 
@@ -332,7 +329,9 @@
         const m = parseInt(document.getElementById('minVal').value) || 0;
         const d = document.getElementById('schedDate').value;
         if(!d) return alert("Select a date.");
-        workDate = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`);
+        // UI uses IST, internal uses UTC
+        const istMs = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`).getTime();
+        workDate = new Date(istMs - (MY_OFFSET * 3600000));
         isFitMode = v; render(); 
     }
     function resetToLive() { isFitMode = false; toggleView('map'); render(); }
