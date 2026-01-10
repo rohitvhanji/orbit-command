@@ -42,6 +42,7 @@
         .legend-box { width: 12px; height: 12px; border-radius: 2px; }
         .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
         .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; }
+        .slack-copy-box { background: #f4f4f4; padding: 15px; border-radius: 6px; border: 1px dashed #ccc; font-family: monospace; font-size: 0.8rem; margin-top: 30px; position: relative; }
         .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
         .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
         .chart-grid { flex-grow: 1; display: flex; gap: 2px; }
@@ -70,7 +71,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST (Locked Reference)</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST (Tiered Optimization)</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -81,9 +82,7 @@
                 </div>
                 <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP RECO SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
                 <div id="chart-body"></div>
-                <div class="slack-copy-box" style="background:#f4f4f4; padding:15px; border-radius:6px; border:1px dashed #ccc; font-family:monospace; font-size:0.8rem; margin-top:30px; position:relative;">
-                    <strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button>
-                </div>
+                <div class="slack-copy-box"><strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button></div>
             </div>
         </div>
         <footer id="scheduler">
@@ -126,7 +125,7 @@
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
-        if(locs) locs.forEach(l => { locationData[l.name] = { name: l.name, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
+        if(locs) locs.forEach(l => { locationData[l.name] = { code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
         team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
         populateLocDropdown(); render();
     }
@@ -168,11 +167,11 @@
         const d = new Date(utcTimeMS);
         const hr = d.getUTCHours();
         const day = d.getUTCDay();
-        if (day === 0 || day === 6) return { color: "var(--status-weekend)", isRed: true, isWork: false };
-        if (hr >= 22 || hr < 7) return { color: "var(--status-snooze)", isRed: true, isWork: false };
-        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", isRed: false, isWork: true }; // Lunch is acceptable
-        if (hr >= 9 && hr < 17) return { color: "var(--slack-green)", isRed: false, isWork: true };
-        return { color: "var(--slack-blue)", isRed: false, isWork: false };
+        if (day === 0 || day === 6) return { color: "var(--status-weekend)", isRed: true, isWork: false, isBlue: false };
+        if (hr >= 22 || hr < 7) return { color: "var(--status-snooze)", isRed: true, isWork: false, isBlue: false };
+        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", isRed: false, isWork: false, isBlue: false };
+        if (hr >= 9 && hr < 17) return { color: "var(--slack-green)", isRed: false, isWork: true, isBlue: false };
+        return { color: "var(--slack-blue)", isRed: false, isWork: false, isBlue: true };
     }
 
     function toggleView(v) {
@@ -181,25 +180,26 @@
         document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
     }
 
-    // GEO-BASED MATCH EVALUATION
-    function getGeoMatchColor(utcMS) {
-        // Evaluate every UNIQUE CHECKED timezone, not people.
+    // GEO-BASED MATCH TIERING
+    function evaluateMatch(utcMS) {
         const checkedTzs = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
-        if(!checkedTzs.length) return "var(--status-weekend)";
+        if(!checkedTzs.length) return { color: "var(--status-weekend)", red: true, greenCount: 0, blueCount: 0 };
         
-        let foundRed = false;
-        let allGreen = true;
+        let foundRed = false, allGreen = true, greenCount = 0, blueCount = 0;
 
         for (const tzName of checkedTzs) {
             const loc = Object.values(locationData).find(l => l.tz === tzName);
             const s = getStatus(utcMS + (loc.offset * 3600000));
-            if (s.isRed) { foundRed = true; break; } // EXIT
-            if (!s.isWork) allGreen = false;
+            if (s.isRed) { foundRed = true; break; }
+            if (s.isWork) { greenCount++; } else { allGreen = false; }
+            if (s.isBlue) { blueCount++; }
         }
 
-        if (foundRed) return "var(--status-snooze)"; // Red
-        if (allGreen) return "var(--slack-green)"; // Green
-        return "var(--status-lunch)"; // Yellow
+        let color = "var(--status-lunch)";
+        if (foundRed) color = "var(--status-snooze)";
+        else if (allGreen) color = "var(--slack-green)";
+
+        return { color, red: foundRed, allGreen, greenCount, blueCount };
     }
 
     function buildMatchChart() {
@@ -242,18 +242,24 @@
             const istH = Math.floor(i * stepMs / 3600000);
             const istM = (i * stepMs / 60000) % 60;
             
-            const color = getGeoMatchColor(slotUTC_MS);
-            results.push({ utc: slotUTC_MS, color, h: istH, m: istM });
+            const data = evaluateMatch(slotUTC_MS);
+            results.push({ utc: slotUTC_MS, color: data.color, h: istH, m: istM, red: data.red, greenCount: data.greenCount, blueCount: data.blueCount });
 
             const box = document.createElement('div');
             box.className = 'chart-box';
-            box.style.background = color;
+            box.style.background = data.color;
             box.onclick = () => syncAndRender(slotUTC_MS, istH, istM);
             g.appendChild(box);
         }
 
-        const finalRecs = results.filter(r => r.color === "var(--slack-green)" || r.color === "var(--status-lunch)")
-            .sort((a,b) => (a.color === "var(--slack-green)" ? -1 : 1))
+        // TIERED RECO logic
+        const finalRecs = results.filter(r => !r.red)
+            .sort((a,b) => {
+                // Tier 1: Green count priority
+                if (b.greenCount !== a.greenCount) return b.greenCount - a.greenCount;
+                // Tier 2: Blue count priority
+                return b.blueCount - a.blueCount;
+            })
             .slice(0, 3);
 
         finalRecs.forEach(r => {
@@ -263,9 +269,9 @@
             recSlots.appendChild(btn);
         });
 
-        const dateStr = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        const dLabel = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         if(finalRecs.length > 0) {
-            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best IST slots are: ${finalRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}.`;
+            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best IST slots are: ${finalRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}.`;
         } else {
             document.getElementById('slack-msg').innerText = "No acceptable slots found.";
         }
@@ -324,8 +330,7 @@
         const labels = document.getElementById('grid-label-layer');
         const markers = document.getElementById('marker-layer');
         night.innerHTML = labels.innerHTML = markers.innerHTML = '';
-        const d = new Date(refMS);
-        const utcHour = d.getUTCHours() + d.getUTCMinutes()/60;
+        const utcHour = new Date(refMS).getUTCHours() + new Date(refMS).getUTCMinutes()/60;
         for(let i=0; i<24; i++) {
             const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
             if (hrInt < 6 || hrInt >= 18) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r); }
