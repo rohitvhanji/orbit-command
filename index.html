@@ -17,7 +17,7 @@
             --status-work: #2EB67D;
             --status-lunch: #ECB22E;
             --status-snooze: #E01E5A;
-            --status-weekend: #A0A0A0; /* Approved Weekend Grey */
+            --status-weekend: #A0A0A0;
             --night-wash: rgba(10, 20, 50, 0.65);
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
@@ -79,9 +79,9 @@
         <div class="auth-card">
             <input type="email" id="auth-email" class="auth-input" placeholder="Email Address">
             <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
-            <button class="btn-main" style="background:var(--slack-purple); color:white;" onclick="handleAuth('login')">Login</button>
-            <button class="btn-main" style="background:var(--slack-green); color:white;" onclick="handleAuth('signup')">Sign Up</button>
-            <div id="auth-status" style="color:red; font-size:0.8rem;"></div>
+            <button class="btn-main" style="background:var(--slack-purple); color:white; width:100%;" onclick="handleAuth('login')">Login</button>
+            <button class="btn-main" style="background:var(--slack-green); color:white; width:100%; margin-top:10px" onclick="handleAuth('signup')">Sign Up</button>
+            <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:10px"></div>
         </div>
     </div>
 </div>
@@ -175,17 +175,19 @@
             const lon = parseFloat(res.lon);
             const lat = parseFloat(res.lat);
             
-            // Precision Offset Calculation
             let offset = lon / 15;
             if (name.toLowerCase().includes("bangalore") || name.toLowerCase().includes("bengaluru")) offset = 5.5;
             if (name.toLowerCase().includes("indianapolis")) offset = -5;
+            if (name.toLowerCase().includes("burlington")) offset = -5;
+            if (name.toLowerCase().includes("new york")) offset = -5;
+            if (name.toLowerCase().includes("chicago")) offset = -6;
+            if (name.toLowerCase().includes("san francisco")) offset = -8;
 
-            // Relatable Codes
             let code = name.toUpperCase().substring(0,3);
             if (name.toLowerCase().includes("bangalore") || name.toLowerCase().includes("bengaluru")) code = "BLR";
             if (name.toLowerCase().includes("indianapolis")) code = "IND";
             if (name.toLowerCase().includes("new york")) code = "NYC";
-            if (name.toLowerCase().includes("chicago")) code = "ORD";
+            if (name.toLowerCase().includes("san francisco")) code = "SFO";
 
             const { data: { user } } = await _supabase.auth.getUser();
             await _supabase.from('locations').upsert({ 
@@ -214,6 +216,7 @@
     }
 
     function getStatus(baseDate, offset) {
+        // Calculate independent local time for each specific offset
         const local = new Date(baseDate.getTime() + (baseDate.getTimezoneOffset() * 60000) + (offset * 3600000));
         const hr = local.getHours();
         const day = local.getDay();
@@ -255,8 +258,11 @@
             const dateStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             const timeStr = local.getHours().toString().padStart(2,'0') + ":" + local.getMinutes().toString().padStart(2,'0');
 
-            // Dynamic Timezone Shortname via Intl
-            const tzName = new Intl.DateTimeFormat('en-US', {timeZoneName:'short', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone}).formatToParts(local).find(p=>p.type==='timeZoneName').value;
+            // Dynamic Timezone Abbreviation lookup
+            const tzName = new Intl.DateTimeFormat('en-US', {
+                timeZoneName:'short', 
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            }).formatToParts(local).find(p=>p.type==='timeZoneName').value;
 
             let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tzName}</span><span>${dateStr} ${timeStr}</span></div>`;
             groups[key].locations.forEach(locName => {
