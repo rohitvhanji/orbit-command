@@ -71,7 +71,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST (Tiered Optimization)</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST (Strict Tiering)</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -163,8 +163,8 @@
         Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
     }
 
-    function getStatus(utcTimeMS) {
-        const d = new Date(utcTimeMS);
+    function getStatus(utcMS) {
+        const d = new Date(utcMS);
         const hr = d.getUTCHours();
         const day = d.getUTCDay();
         if (day === 0 || day === 6) return { color: "var(--status-weekend)", isRed: true, isWork: false, isBlue: false };
@@ -180,26 +180,28 @@
         document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
     }
 
-    // GEO-BASED MATCH TIERING
+    // PURE GEO EVALUATION
     function evaluateMatch(utcMS) {
-        const checkedTzs = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
-        if(!checkedTzs.length) return { color: "var(--status-weekend)", red: true, greenCount: 0, blueCount: 0 };
-        
-        let foundRed = false, allGreen = true, greenCount = 0, blueCount = 0;
+        const activeTzs = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
+        if(!activeTzs.length) return { color: "var(--status-weekend)", isRed: true };
 
-        for (const tzName of checkedTzs) {
+        let redFound = false;
+        let greenCount = 0;
+        let blueCount = 0;
+        let totalCount = activeTzs.length;
+
+        for (const tzName of activeTzs) {
             const loc = Object.values(locationData).find(l => l.tz === tzName);
             const s = getStatus(utcMS + (loc.offset * 3600000));
-            if (s.isRed) { foundRed = true; break; }
-            if (s.isWork) { greenCount++; } else { allGreen = false; }
-            if (s.isBlue) { blueCount++; }
+            if (s.isRed) { redFound = true; break; }
+            if (s.isWork) greenCount++;
+            if (s.isBlue) blueCount++;
         }
 
-        let color = "var(--status-lunch)";
-        if (foundRed) color = "var(--status-snooze)";
-        else if (allGreen) color = "var(--slack-green)";
-
-        return { color, red: foundRed, allGreen, greenCount, blueCount };
+        if (redFound) return { color: "var(--status-snooze)", isRed: true, greenCount, blueCount };
+        // GREEN ONLY IF ALL ARE GREEN
+        if (greenCount === totalCount) return { color: "var(--slack-green)", isRed: false, isGreen: true, greenCount, blueCount };
+        return { color: "var(--status-lunch)", isRed: false, isGreen: false, greenCount, blueCount };
     }
 
     function buildMatchChart() {
@@ -226,9 +228,8 @@
             const m = Object.values(locationData).find(l => l.tz === tzL);
             let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){
-                const slotUTC_MS = istMidnightInUTC + (i * stepMs);
-                const localMS = slotUTC_MS + (m.offset * 3600000);
-                row += `<div class="chart-box" style="background:${getStatus(localMS).color}"></div>`;
+                const slotUTC = istMidnightInUTC + (i * stepMs);
+                row += `<div class="chart-box" style="background:${getStatus(slotUTC + (m.offset * 3600000)).color}"></div>`;
             }
             body.innerHTML += row + `</div></div>`;
         });
@@ -238,74 +239,62 @@
         const results = [];
         const g = document.getElementById('m-grid');
         for(let i=0; i<count; i++){
-            const slotUTC_MS = istMidnightInUTC + (i * stepMs);
+            const slotUTC = istMidnightInUTC + (i * stepMs);
             const istH = Math.floor(i * stepMs / 3600000);
             const istM = (i * stepMs / 60000) % 60;
             
-            const data = evaluateMatch(slotUTC_MS);
-            results.push({ utc: slotUTC_MS, color: data.color, h: istH, m: istM, red: data.red, greenCount: data.greenCount, blueCount: data.blueCount });
+            const data = evaluateMatch(slotUTC);
+            results.push({ utc: slotUTC, color: data.color, h: istH, m: istM, isRed: data.isRed, isGreen: data.isGreen, greenCount: data.greenCount, blueCount: data.blueCount });
 
             const box = document.createElement('div');
             box.className = 'chart-box';
             box.style.background = data.color;
-            box.onclick = () => syncAndRender(slotUTC_MS, istH, istM);
+            box.onclick = () => syncAndRender(slotUTC, istH, istM);
             g.appendChild(box);
         }
 
-        // TIERED RECO logic
-        const finalRecs = results.filter(r => !r.red)
-            .sort((a,b) => {
-                // Tier 1: Green count priority
-                if (b.greenCount !== a.greenCount) return b.greenCount - a.greenCount;
-                // Tier 2: Blue count priority
-                return b.blueCount - a.blueCount;
-            })
-            .slice(0, 3);
+        // TIERED RECO: Green > Max Green > Max Blue
+        const sortedRecs = results.filter(r => !r.isRed).sort((a,b) => {
+            if (a.isGreen && !b.isGreen) return -1;
+            if (!a.isGreen && b.isGreen) return 1;
+            if (b.greenCount !== a.greenCount) return b.greenCount - a.greenCount;
+            return b.blueCount - a.blueCount;
+        }).slice(0, 3);
 
-        finalRecs.forEach(r => {
+        sortedRecs.forEach(r => {
             const btn = document.createElement('button'); btn.className = 'rec-btn';
             btn.innerText = `${r.h.toString().padStart(2,'0')}:${r.m.toString().padStart(2,'0')}`;
             btn.onclick = () => syncAndRender(r.utc, r.h, r.m);
             recSlots.appendChild(btn);
         });
 
-        const dLabel = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        if(finalRecs.length > 0) {
-            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best IST slots are: ${finalRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}.`;
+        const dStr = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        if(sortedRecs.length > 0) {
+            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dStr}, the best slots are: ${sortedRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}.`;
         } else {
             document.getElementById('slack-msg').innerText = "No acceptable slots found.";
         }
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
-    
-    function syncAndRender(utcMS, h, m) { 
-        workDateUTC_MS = utcMS;
-        isFitMode = true; 
-        document.getElementById('hourVal').value = h; 
-        document.getElementById('minVal').value = m === 30 ? "30" : "00"; 
-        render(); 
-    }
+    function syncAndRender(utcMS, h, m) { workDateUTC_MS = utcMS; isFitMode = true; document.getElementById('hourVal').value = h; document.getElementById('minVal').value = m === 30 ? "30" : "00"; render(); }
 
     function render() {
         const refMS = isFitMode ? workDateUTC_MS : (Date.now() + (new Date().getTimezoneOffset()*60000));
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         const groups = {};
         Object.keys(locationData).forEach(name => { const label = locationData[name].tz || "UTC"; if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] }; groups[label].cities.push(name); });
-        
         Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
             const g = groups[tzK];
             const local = new Date(refMS + (g.offset * 3600000));
-            const dS = local.toUTCString().split(' ').slice(0,4).join(' ');
             const tS = local.getUTCHours().toString().padStart(2,'0') + ":" + local.getUTCMinutes().toString().padStart(2,'0');
-            
-            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${dS} ${tS}</span></div>`;
+            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${tS}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
                     const s = getStatus(refMS + (locationData[loc].offset * 3600000)); 
-                    const emoji = s.color === "var(--status-weekend)" ? "🏖️" : s.color === "var(--status-snooze)" ? "😴" : s.color === "var(--status-lunch)" ? "🍱" : s.isWork ? "💻" : "🏠";
+                    const emoji = s.color === "var(--status-weekend)" ? "🏖️" : s.isRed ? "😴" : s.color === "var(--status-lunch)" ? "🍱" : s.isWork ? "💻" : "🏠";
                     tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
@@ -319,8 +308,7 @@
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
-        line.setAttribute("class", "grid-line");
+        line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400); line.setAttribute("class", "grid-line");
         txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
         txt.textContent = text; g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
     }
