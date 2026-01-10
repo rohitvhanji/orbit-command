@@ -34,6 +34,7 @@
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
         #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
         .chart-centered-content { max-width: 1200px; margin: 0 auto; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
@@ -104,9 +105,10 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let locationData = {}; let team = [];
-    let isFitMode = false; let isMatchViewActive = false; let workDate = new Date();
+    let isFitMode = false; let isMatchViewActive = false;
+    let workDateUTC_MS = Date.now(); // Internal absolute MS timestamp
     let chartExclusions = new Set();
-    const MY_OFFSET = 5.5; // Locked IST Reference Offset
+    const MY_OFFSET = 5.5; // Locked Reference for Display
 
     async function handleAuth() {
         const e = document.getElementById('auth-email').value;
@@ -124,7 +126,7 @@
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
-        if(locs) locs.forEach(l => { locationData[l.name] = { id: l.id, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
+        if(locs) locs.forEach(l => { locationData[l.name] = { code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
         team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
         populateLocDropdown(); render();
     }
@@ -162,9 +164,11 @@
         Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
     }
 
-    function getStatus(localTime) {
-        const hr = localTime.getHours();
-        const day = localTime.getDay();
+    // PURE UTC Status Engine
+    function getStatus(utcTimeMS) {
+        const d = new Date(utcTimeMS);
+        const hr = d.getUTCHours();
+        const day = d.getUTCDay();
         if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--status-weekend)", work: false, snooze: false };
         if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, snooze: true };
         if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true, snooze: false };
@@ -181,7 +185,7 @@
     function buildMatchChart() {
         toggleView('rec');
         const dS = document.getElementById('schedDate').value;
-        const bD = dS ? new Date(dS + "T00:00:00") : new Date();
+        if(!dS) return;
         const body = document.getElementById('chart-body');
         const recSlots = document.getElementById('rec-slots');
         body.innerHTML = ''; recSlots.innerHTML = '';
@@ -196,15 +200,16 @@
         for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
         body.innerHTML += timeline + `</div>`;
 
+        // Anchor Start: Midnight of date in IST, converted to absolute MS
+        const istMidnightInUTC = new Date(dS + "T00:00:00Z").getTime() - (MY_OFFSET * 3600000);
+
         uTzs.forEach(tzL => {
             const m = Object.values(locationData).find(l => l.tz === tzL);
             let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){
-                // Calculate local time based on IST midnight baseline
-                const istSlotMs = bD.getTime() + (i * stepMs);
-                const utcForSlot = istSlotMs - (MY_OFFSET * 3600000);
-                const local = new Date(utcForSlot + (m.offset * 3600000));
-                row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
+                const slotUTC_MS = istMidnightInUTC + (i * stepMs);
+                const localMS = slotUTC_MS + (m.offset * 3600000);
+                row += `<div class="chart-box" style="background:${getStatus(localMS).color}"></div>`;
             }
             body.innerHTML += row + `</div></div>`;
         });
@@ -214,45 +219,40 @@
         const results = [];
         const g = document.getElementById('m-grid');
         for(let i=0; i<count; i++){
-            const istSlotMs = bD.getTime() + (i * stepMs);
-            const data = calcMatchLogic(istSlotMs);
-            results.push({ timeMs: istSlotMs, score: data.score, color: data.color });
+            const slotUTC_MS = istMidnightInUTC + (i * stepMs);
+            const data = calcMatchLogic(slotUTC_MS);
+            const istH = Math.floor(i * stepMs / 3600000);
+            const istM = (i * stepMs / 60000) % 60;
+            results.push({ utc: slotUTC_MS, score: data.score, color: data.color, h: istH, m: istM });
             const box = document.createElement('div');
             box.className = 'chart-box';
             box.style.background = data.color;
-            box.onclick = () => syncAndRender(istSlotMs);
+            box.onclick = () => syncAndRender(slotUTC_MS, istH, istM);
             g.appendChild(box);
         }
 
         const sorted = results.sort((a,b) => b.score - a.score).slice(0, 3);
         sorted.forEach(r => {
-            const timeObj = new Date(r.timeMs);
             const btn = document.createElement('button'); btn.className = 'rec-btn';
-            btn.innerText = `${timeObj.getHours().toString().padStart(2,'0')}:${timeObj.getMinutes().toString().padStart(2,'0')} (${r.score}%)`;
-            btn.onclick = () => syncAndRender(r.timeMs);
+            btn.innerText = `${r.h.toString().padStart(2,'0')}:${r.m.toString().padStart(2,'0')} (${r.score}%)`;
+            btn.onclick = () => syncAndRender(r.utc, r.h, r.m);
             recSlots.appendChild(btn);
         });
 
-        const dL = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dL}, the best slots are: ${sorted.map(s => {
-            let d = new Date(s.timeMs);
-            return d.getHours() + ":" + d.getMinutes().toString().padStart(2,'0');
-        }).join(', ')}. This time works for roughly ${sorted[0].score}% of attendees!`;
+        const dLabel = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best slots are: ${sorted.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}. This time maybe works for ${sorted[0].score}% of attendees!`;
     }
 
-    function calcMatchLogic(istMs) {
+    function calcMatchLogic(utcMS) {
         const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
         if(!filtered.length) return { score: 0, color: 'var(--status-weekend)' };
         let hasRed = false, allGreen = true, workCount = 0;
-        const utcMs = istMs - (MY_OFFSET * 3600000);
-
         filtered.forEach(m => {
-            const s = getStatus(new Date(utcMs + (locationData[m.loc].offset * 3600000)));
+            const s = getStatus(utcMS + (locationData[m.loc].offset * 3600000));
             if(s.snooze) hasRed = true;
             if(!s.work || s.emoji === "🍱") allGreen = false;
             if(s.work) workCount++;
         });
-
         const score = Math.round((workCount / filtered.length) * 100);
         if(hasRed) return { score, color: 'var(--status-snooze)' };
         if(allGreen) return { score, color: 'var(--slack-green)' };
@@ -261,48 +261,39 @@
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
     
-    function syncAndRender(istMs) { 
-        const timeObj = new Date(istMs);
-        // FORCE the global workDate to exactly what's needed to render 00:00 locally for IST
-        // Subtract the IST offset from the IST-anchored click to find the UTC timestamp the Roster needs
-        const utcCorrected = istMs - (MY_OFFSET * 3600000);
-        
-        workDate = new Date(utcCorrected);
+    function syncAndRender(utcMS, h, m) { 
+        workDateUTC_MS = utcMS;
         isFitMode = true; 
-        
-        document.getElementById('hourVal').value = timeObj.getHours(); 
-        document.getElementById('minVal').value = timeObj.getMinutes() === 30 ? "30" : "00"; 
+        document.getElementById('hourVal').value = h; 
+        document.getElementById('minVal').value = m === 30 ? "30" : "00"; 
         render(); 
     }
 
     function render() {
-        const ref = isFitMode ? workDate : new Date();
+        const refMS = isFitMode ? workDateUTC_MS : (Date.now() + (new Date().getTimezoneOffset()*60000));
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         const groups = {};
         Object.keys(locationData).forEach(name => { const label = locationData[name].tz || "UTC"; if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] }; groups[label].cities.push(name); });
         
-        // Internal UTC baseline for all city offsets
-        const gZ = ref.getTime() + (ref.getTimezoneOffset() * 60000);
-
         Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
             const g = groups[tzK];
-            const localTime = new Date(gZ + (g.offset * 3600000));
-            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${localTime.getHours().toString().padStart(2,'0')}:${localTime.getMinutes().toString().padStart(2,'0')}</span></div>`;
+            const local = new Date(refMS + (g.offset * 3600000));
+            const dS = local.toUTCString().split(' ').slice(0,4).join(' ');
+            const tS = local.getUTCHours().toString().padStart(2,'0') + ":" + local.getUTCMinutes().toString().padStart(2,'0');
+            
+            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${dS} ${tS}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
-                    const lM = locationData[loc]; 
-                    if (lM) { 
-                        const s = getStatus(new Date(gZ + (lM.offset * 3600000))); 
-                        tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
-                    } 
+                    const s = getStatus(refMS + (locationData[loc].offset * 3600000)); 
+                    tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${s.emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-        drawMap(ref);
+        drawMap(refMS);
     }
 
     function addNeedleLabel(x, text, color, parent) {
@@ -315,12 +306,13 @@
         txt.textContent = text; g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
     }
 
-    function drawMap(refDate) {
+    function drawMap(refMS) {
         const night = document.getElementById('day-night-layer');
         const labels = document.getElementById('grid-label-layer');
         const markers = document.getElementById('marker-layer');
         night.innerHTML = labels.innerHTML = markers.innerHTML = '';
-        const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
+        const d = new Date(refMS);
+        const utcHour = d.getUTCHours() + d.getUTCMinutes()/60;
         for(let i=0; i<24; i++) {
             const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
             if (hrInt < 6 || hrInt >= 18) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r); }
@@ -347,8 +339,8 @@
         const m = parseInt(document.getElementById('minVal').value) || 0;
         const d = document.getElementById('schedDate').value;
         if(!d) return alert("Select a date.");
-        const istMs = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`).getTime();
-        workDate = new Date(istMs - (MY_OFFSET * 3600000));
+        const localUTC_MS = new Date(d + "T" + h.toString().padStart(2,'0') + ":" + m.toString().padStart(2,'0') + ":00Z").getTime();
+        workDateUTC_MS = localUTC_MS - (MY_OFFSET * 3600000); // Strip IST back to Pure UTC
         isFitMode = v; render(); 
     }
     function resetToLive() { isFitMode = false; toggleView('map'); render(); }
