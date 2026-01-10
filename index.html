@@ -34,7 +34,6 @@
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        
         #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
         .chart-centered-content { max-width: 1200px; margin: 0 auto; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
@@ -106,9 +105,9 @@
 
     let locationData = {}; let team = [];
     let isFitMode = false; let isMatchViewActive = false;
-    let workDateUTC_MS = Date.now(); // Internal absolute MS timestamp
+    let workDateUTC_MS = Date.now();
     let chartExclusions = new Set();
-    const MY_OFFSET = 5.5; // Locked Reference for Display
+    const MY_OFFSET = 5.5; // IST Anchor
 
     async function handleAuth() {
         const e = document.getElementById('auth-email').value;
@@ -164,7 +163,6 @@
         Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
     }
 
-    // PURE UTC Status Engine
     function getStatus(utcTimeMS) {
         const d = new Date(utcTimeMS);
         const hr = d.getUTCHours();
@@ -200,7 +198,6 @@
         for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
         body.innerHTML += timeline + `</div>`;
 
-        // Anchor Start: Midnight of date in IST, converted to absolute MS
         const istMidnightInUTC = new Date(dS + "T00:00:00Z").getTime() - (MY_OFFSET * 3600000);
 
         uTzs.forEach(tzL => {
@@ -220,10 +217,21 @@
         const g = document.getElementById('m-grid');
         for(let i=0; i<count; i++){
             const slotUTC_MS = istMidnightInUTC + (i * stepMs);
-            const data = calcMatchLogic(slotUTC_MS);
             const istH = Math.floor(i * stepMs / 3600000);
             const istM = (i * stepMs / 60000) % 60;
-            results.push({ utc: slotUTC_MS, score: data.score, color: data.color, h: istH, m: istM });
+            
+            // STRICT PRIORITY CALCULATION
+            const data = calcStrictMatch(slotUTC_MS);
+            results.push({ 
+                utc: slotUTC_MS, 
+                score: data.score, 
+                color: data.color, 
+                h: istH, m: istM, 
+                isGreen: data.isGreen,
+                hasRed: data.hasRed,
+                workCount: data.workCount 
+            });
+
             const box = document.createElement('div');
             box.className = 'chart-box';
             box.style.background = data.color;
@@ -231,21 +239,33 @@
             g.appendChild(box);
         }
 
-        const sorted = results.sort((a,b) => b.score - a.score).slice(0, 3);
-        sorted.forEach(r => {
+        // RECO ENGINE: Filter RED, prioritize GREEN, then YELLOW with max GREEN
+        const sortedRecs = results.filter(r => !r.hasRed).sort((a, b) => {
+            if (a.isGreen && !b.isGreen) return -1;
+            if (!a.isGreen && b.isGreen) return 1;
+            return b.workCount - a.workCount;
+        }).slice(0, 3);
+
+        sortedRecs.forEach(r => {
             const btn = document.createElement('button'); btn.className = 'rec-btn';
             btn.innerText = `${r.h.toString().padStart(2,'0')}:${r.m.toString().padStart(2,'0')} (${r.score}%)`;
             btn.onclick = () => syncAndRender(r.utc, r.h, r.m);
             recSlots.appendChild(btn);
         });
 
-        const dLabel = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best slots are: ${sorted.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}. This time maybe works for ${sorted[0].score}% of attendees!`;
+        const dObj = new Date(dS + "T12:00:00Z");
+        const dateStr = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        if(sortedRecs.length > 0) {
+            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best IST slots are: ${sortedRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}. This time maybe works for ${sortedRecs[0].score}% of attendees!`;
+        } else {
+            document.getElementById('slack-msg').innerText = "No acceptable slots found for this date. (Everyone is sleeping!)";
+        }
     }
 
-    function calcMatchLogic(utcMS) {
+    function calcStrictMatch(utcMS) {
         const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
-        if(!filtered.length) return { score: 0, color: 'var(--status-weekend)' };
+        if(!filtered.length) return { score: 0, color: 'var(--status-weekend)', hasRed: false, isGreen: false, workCount: 0 };
+        
         let hasRed = false, allGreen = true, workCount = 0;
         filtered.forEach(m => {
             const s = getStatus(utcMS + (locationData[m.loc].offset * 3600000));
@@ -253,10 +273,13 @@
             if(!s.work || s.emoji === "🍱") allGreen = false;
             if(s.work) workCount++;
         });
+
         const score = Math.round((workCount / filtered.length) * 100);
-        if(hasRed) return { score, color: 'var(--status-snooze)' };
-        if(allGreen) return { score, color: 'var(--slack-green)' };
-        return { score, color: 'var(--status-lunch)' };
+        let color = 'var(--status-lunch)'; // Default Yellow/Amber
+        if(hasRed) color = 'var(--status-snooze)';
+        else if(allGreen) color = 'var(--slack-green)';
+
+        return { score, color, hasRed, isGreen: allGreen, workCount };
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
@@ -340,7 +363,7 @@
         const d = document.getElementById('schedDate').value;
         if(!d) return alert("Select a date.");
         const localUTC_MS = new Date(d + "T" + h.toString().padStart(2,'0') + ":" + m.toString().padStart(2,'0') + ":00Z").getTime();
-        workDateUTC_MS = localUTC_MS - (MY_OFFSET * 3600000); // Strip IST back to Pure UTC
+        workDateUTC_MS = localUTC_MS - (MY_OFFSET * 3600000);
         isFitMode = v; render(); 
     }
     function resetToLive() { isFitMode = false; toggleView('map'); render(); }
