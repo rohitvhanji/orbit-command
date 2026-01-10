@@ -14,11 +14,44 @@
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
-        #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
+
+        /* --- RESTORED HERO AUTH DESIGN --- */
+        #auth-overlay {
+            position: fixed; inset: 0; 
+            background: var(--loom-gradient);
+            z-index: 2000; display: flex; align-items: center; justify-content: center;
+            padding: 20px; overflow-y: auto;
+        }
+        .bg-mesh {
+            position: absolute; width: 150%; height: 150%;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg');
+            background-size: cover; opacity: 0.05; filter: invert(1);
+            animation: drift 100s linear infinite;
+        }
+        @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .hero-container {
+            display: flex; width: 100%; max-width: 1100px;
+            align-items: center; justify-content: space-between; gap: 40px;
+            position: relative; z-index: 2;
+        }
+        .brand-section { flex: 1.2; text-align: left; color: white; }
+        .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
+        .brand-section p { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.9); margin-top: 20px; font-weight: 400; }
+        .auth-card {
+            flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px;
+        }
+        .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
+        .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
+        .btn-login { background: var(--slack-purple); color: white; }
+        .btn-signup { background: var(--slack-green); color: white; }
+
+        /* --- APP SHELL STYLES --- */
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; }
+        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: white; text-transform: uppercase; }
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-input { width: 100%; padding: 10px; border-radius: 4px; border: none; margin-bottom: 6px; box-sizing: border-box; background: rgba(255,255,255,0.1); color: white; }
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
@@ -34,6 +67,7 @@
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
         #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
         .chart-centered-content { max-width: 1200px; margin: 0 auto; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
@@ -58,16 +92,47 @@
     </style>
 </head>
 <body>
-<div id="auth-overlay"><div class="auth-card"><input type="email" id="auth-email" class="mgmt-input" placeholder="Email" style="color:black"><input type="password" id="auth-pass" class="mgmt-input" placeholder="Password" style="color:black"><button onclick="handleAuth()" style="padding:15px; background:var(--slack-purple); color:white; border:none; border-radius:8px; cursor:pointer;">LOGIN</button><div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div></div></div>
+
+<div id="auth-overlay">
+    <div class="bg-mesh"></div>
+    <div class="hero-container">
+        <div class="brand-section">
+            <h1>loom</h1>
+            <p>Weaving scheduling harmony for global teams.</p>
+        </div>
+        <div class="auth-card">
+            <input type="email" id="auth-email" class="auth-input" placeholder="Email Address">
+            <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
+            <button class="btn-main btn-login" onclick="handleAuth('login')">Login to Loom</button>
+            <div style="text-align: center; color: #bbb; margin: 5px 0; font-size: 0.9rem;">— or —</div>
+            <button class="btn-main btn-signup" onclick="handleAuth('signup')">Start Weaving</button>
+            <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">Experience effortless coordination for your distributed team.</p>
+        </div>
+    </div>
+</div>
+
 <div id="app-shell">
     <aside id="sidebar">
-        <div class="sidebar-header"><h2>LOOM</h2><span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6;">Logout</span></div>
-        <div class="mgmt-section"><input type="text" id="cityInput" class="mgmt-input" placeholder="City name..."><button onclick="lookupCity()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:white; color:var(--slack-purple)">ADD OFFICE</button></div>
-        <div class="mgmt-section"><input type="text" id="newName" class="mgmt-input" placeholder="Name..."><select id="newLoc" class="mgmt-input"></select><button onclick="addMember()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:var(--slack-green); color:white;">ADD TEAMMATE</button></div>
+        <div class="sidebar-header">
+            <h2>LOOM</h2>
+            <span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
+        </div>
+        <div class="mgmt-section">
+            <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
+            <button class="btn-main btn-login" style="padding:10px; font-size:0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
+        </div>
+        <div class="mgmt-section">
+            <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
+            <select id="newLoc" class="mgmt-input"></select>
+            <button class="btn-main btn-signup" style="padding:10px; font-size:0.8rem;" onclick="addMember()">ADD TEAMMATE</button>
+        </div>
         <div id="member-groups"></div>
     </aside>
+
     <main id="main-view-container">
         <div id="map-area"><div id="map-bg"></div><svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none"><g id="day-night-layer"></g><g id="grid-lines-layer"></g><g id="grid-label-layer"></g><g id="marker-layer"></g></svg></div>
+        
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
@@ -85,6 +150,7 @@
                 <div class="slack-copy-box"><strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button></div>
             </div>
         </div>
+
         <footer id="scheduler">
             <input type="date" id="schedDate" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
@@ -109,10 +175,10 @@
     let chartExclusions = new Set();
     const MY_OFFSET = 5.5; 
 
-    async function handleAuth() {
-        const e = document.getElementById('auth-email').value;
-        const p = document.getElementById('auth-pass').value;
-        const { error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
+    async function handleAuth(type) {
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-pass').value;
+        const { error } = type === 'login' ? await _supabase.auth.signInWithPassword({ email, password }) : await _supabase.auth.signUp({ email, password });
         if (error) document.getElementById('auth-status').innerText = error.message; else checkSession();
     }
     async function checkSession() {
@@ -169,7 +235,7 @@
         const day = d.getUTCDay();
         if (day === 0 || day === 6) return { color: "var(--status-weekend)", isRed: true, isWork: false, isBlue: false };
         if (hr >= 22 || hr < 7) return { color: "var(--status-snooze)", isRed: true, isWork: false, isBlue: false };
-        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", isRed: false, isWork: false, isBlue: false };
+        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", isRed: false, isWork: true, isBlue: false };
         if (hr >= 9 && hr < 17) return { color: "var(--slack-green)", isRed: false, isWork: true, isBlue: false };
         return { color: "var(--slack-blue)", isRed: false, isWork: false, isBlue: true };
     }
@@ -220,7 +286,6 @@
         allTzNames.forEach(tzName => {
             const loc = Object.values(locationData).find(l => l.tz === tzName);
             const isExcluded = chartExclusions.has(tzName);
-            // Hide row content if deselected
             let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${tzName}')"> <span>${tzName}</span></div><div class="chart-grid" style="visibility: ${isExcluded ? 'hidden' : 'visible'}">`;
             for(let i=0; i<count; i++){
                 const slotUTC = istMidnightInUTC + (i * stepMs);
