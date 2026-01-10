@@ -71,7 +71,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Timezone Perspective</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Timezone Grid</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -217,11 +217,11 @@
 
         const istMidnightInUTC = new Date(dS + "T00:00:00Z").getTime() - (MY_OFFSET * 3600000);
 
-        // Render one row per UNIQUE TIMEZONE
         allTzNames.forEach(tzName => {
             const loc = Object.values(locationData).find(l => l.tz === tzName);
             const isExcluded = chartExclusions.has(tzName);
-            let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${tzName}')"> <span>${tzName}</span></div><div class="chart-grid">`;
+            // Hide row content if deselected
+            let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${tzName}')"> <span>${tzName}</span></div><div class="chart-grid" style="visibility: ${isExcluded ? 'hidden' : 'visible'}">`;
             for(let i=0; i<count; i++){
                 const slotUTC = istMidnightInUTC + (i * stepMs);
                 row += `<div class="chart-box" style="background:${getStatus(slotUTC + (loc.offset * 3600000)).color}"></div>`;
@@ -246,7 +246,6 @@
             g.appendChild(box);
         }
 
-        // TIERED RECO logic: Green > Max Green > Max Blue
         const sortedRecs = results.filter(r => !r.isRed).sort((a,b) => {
             if (a.isGreen && !b.isGreen) return -1;
             if (!a.isGreen && b.isGreen) return 1;
