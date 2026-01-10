@@ -42,6 +42,7 @@
         .legend-box { width: 12px; height: 12px; border-radius: 2px; }
         .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
         .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; }
+        .slack-copy-box { background: #f4f4f4; padding: 15px; border-radius: 6px; border: 1px dashed #ccc; font-family: monospace; font-size: 0.8rem; margin-top: 30px; position: relative; }
         .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
         .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
         .chart-grid { flex-grow: 1; display: flex; gap: 2px; }
@@ -70,7 +71,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Locked IST Reference</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Strict IST Reference Anchor</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -81,9 +82,7 @@
                 </div>
                 <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP RECO SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
                 <div id="chart-body"></div>
-                <div class="slack-copy-box" style="background:#f4f4f4; padding:15px; border-radius:6px; border:1px dashed #ccc; font-family:monospace; font-size:0.8rem; margin-top:30px; position:relative;">
-                    <strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button>
-                </div>
+                <div class="slack-copy-box"><strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button></div>
             </div>
         </div>
         <footer id="scheduler">
@@ -168,11 +167,11 @@
         const d = new Date(utcTimeMS);
         const hr = d.getUTCHours();
         const day = d.getUTCDay();
-        if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--status-weekend)", work: false, snooze: false, awake: true };
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, snooze: true, awake: false };
-        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: false, snooze: false, awake: true };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true, snooze: false, awake: true };
-        return { emoji: "🏠", color: "var(--slack-blue)", work: false, snooze: false, awake: true };
+        if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--status-weekend)", work: false, snooze: false };
+        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, snooze: true };
+        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: false, snooze: false };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true, snooze: false };
+        return { emoji: "🏠", color: "var(--slack-blue)", work: false, snooze: false };
     }
 
     function toggleView(v) {
@@ -221,8 +220,9 @@
             const istH = Math.floor(i * stepMs / 3600000);
             const istM = (i * stepMs / 60000) % 60;
             
-            // NEW STRICT SWITCH LOGIC
-            const data = calcStrictSwitchLogic(slotUTC_MS);
+            // EXECUTE ABSOLUTE LOGIC PASS
+            const data = executeStrictMatchLogic(slotUTC_MS);
+            
             results.push({ 
                 utc: slotUTC_MS, 
                 color: data.color, 
@@ -262,31 +262,30 @@
         }
     }
 
-    function calcStrictSwitchLogic(utcMS) {
+    function executeStrictMatchLogic(utcMS) {
         const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
         if(!filtered.length) return { score: 0, color: 'var(--status-weekend)', hasRed: false, isGreen: false, isYellow: false };
         
         let foundRed = false;
-        let foundGreen = false;
         let allGreen = true;
-        let allAwakeNoGreen = true;
+        let foundGreen = false;
         let workCount = 0;
 
+        // PASS 1: THE RED GAVEL
         for (const m of filtered) {
             const s = getStatus(utcMS + (locationData[m.loc].offset * 3600000));
-            if(s.snooze) { foundRed = true; break; } // DEAL BREAKER
-            if(s.work) { foundGreen = true; workCount++; }
-            if(!s.work) allGreen = false;
-            if(s.work) allAwakeNoGreen = false; 
+            if(s.snooze) { foundRed = true; break; }
+            if(s.work) { foundGreen = true; workCount++; } else { allGreen = false; }
         }
 
         const score = Math.round((workCount / filtered.length) * 100);
 
-        if(foundRed) return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
-        if(allGreen) return { score, color: 'var(--slack-green)', hasRed: false, isGreen: true, isYellow: false };
-        if(allAwakeNoGreen) return { score, color: 'var(--status-lunch)', hasRed: false, isGreen: false, isYellow: true };
+        // PASS 2: THE BINARY DECISION
+        if (foundRed) return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
+        if (allGreen) return { score, color: 'var(--slack-green)', hasRed: false, isGreen: true, isYellow: false };
+        if (!foundGreen) return { score, color: 'var(--status-lunch)', hasRed: false, isGreen: false, isYellow: true };
         
-        // EVERYTHING ELSE (MIXED) -> RED
+        // MIXED CASE (Neither all-work nor all-awake-no-work) -> Failure Red
         return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
     }
 
