@@ -108,7 +108,7 @@
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
             <select id="minVal" style="padding:8px"><option value="00">00</option><option value="30">30</option></select>
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
-            <button onclick="showMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
+            <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
             <div id="predictVal" style="font-weight:900; margin-left:15px">0% Harmony</div>
         </footer>
@@ -153,13 +153,13 @@
         const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
         if (geo && geo[0]) {
             const apiKey = 'VW4CCUCGOI2M';
-            const tzRes = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
-            if(tzRes.status === 'OK') {
+            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
+            if(tzR.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
                 await _supabase.from('locations').upsert({
                     name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(),
                     lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat),
-                    utc_offset: tzRes.gmtOffset / 3600, tz: tzRes.abbreviation, user_id: user.id
+                    utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id
                 }, { onConflict: 'user_id,name' });
                 document.getElementById('cityInput').value = ''; loadData();
             }
@@ -199,77 +199,76 @@
         document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
     }
 
-    function showMatchChart() {
-        const dStr = document.getElementById('schedDate').value;
-        const bDate = dStr ? new Date(dStr + "T00:00:00") : new Date();
+    function buildMatchChart() {
+        const dS = document.getElementById('schedDate').value;
+        const bD = dS ? new Date(dS + "T00:00:00") : new Date();
         const body = document.getElementById('chart-body');
         body.innerHTML = '';
 
-        const uniqueTzs = [...new Set(Object.values(locationData).map(l => l.tz))];
-        const count = document.getElementById('minVal').value === "30" ? 48 : 24;
-        const step = (24/count) * 60 * 60000;
+        const uTzs = [...new Set(Object.values(locationData).map(l => l.tz))];
+        const steps = document.getElementById('minVal').value === "30" ? 48 : 24;
+        const msPer = (24/steps) * 60 * 60000;
 
         let timeline = `<div class="chart-timeline">`;
         for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
         body.innerHTML += timeline + `</div>`;
 
-        uniqueTzs.forEach(tzLabel => {
-            const tzMeta = Object.values(locationData).find(l => l.tz === tzLabel);
+        uTzs.forEach(tzL => {
+            const m = Object.values(locationData).find(l => l.tz === tzL);
             let row = `<div class="chart-row">
                 <div class="chart-label">
-                    <input type="checkbox" ${chartExclusions.has(tzLabel)?'':'checked'} onchange="toggleExclusion('${tzLabel}')">
-                    <span>${tzLabel}</span>
+                    <input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')">
+                    <span>${tzL}</span>
                 </div>
                 <div class="chart-grid">`;
-            for(let i=0; i<count; i++){
-                const d = new Date(bDate.getTime() + (i * step));
-                const local = new Date(d.getTime() + (d.getTimezoneOffset()*60000) + (tzMeta.offset * 3600000));
+            for(let i=0; i<steps; i++){
+                const d = new Date(bD.getTime() + (i * msPer));
+                const local = new Date(d.getTime() + (d.getTimezoneOffset()*60000) + (m.offset * 3600000));
                 row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
             }
             body.innerHTML += row + `</div></div>`;
         });
 
-        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px;"><div class="chart-label" style="color:var(--slack-green); font-weight: 900;">MATCH</div><div class="chart-grid" id="match-row-grid"></div></div>`;
-        refreshMatchGrid(bDate, count, step);
+        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px;"><div class="chart-label" style="color:var(--slack-green); font-weight: 900;">MATCH</div><div class="chart-grid" id="m-grid"></div></div>`;
+        refreshM(bD, steps, msPer);
         toggleView('rec');
     }
 
-    function toggleExclusion(label) {
-        if(chartExclusions.has(label)) chartExclusions.delete(label); else chartExclusions.add(label);
-        showMatchChart(); 
+    function toggleEx(l) {
+        if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l);
+        buildMatchChart(); 
     }
 
-    function refreshMatchGrid(bDate, count, step) {
-        const grid = document.getElementById('match-row-grid'); if(!grid) return;
-        grid.innerHTML = '';
-        for(let i=0; i<count; i++){
-            const tDate = new Date(bDate.getTime() + (i * step));
-            const score = calculateSpecificHarmony(tDate);
-            const color = score > 75 ? 'var(--slack-green)' : score > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
-            const box = document.createElement('div');
-            box.className = 'chart-box';
-            box.style.background = color;
-            box.onclick = () => {
-                workDate = new Date(tDate.getTime()); isFitMode = true;
+    function refreshM(bD, steps, msPer) {
+        const g = document.getElementById('m-grid'); if(!g) return;
+        g.innerHTML = '';
+        for(let i=0; i<steps; i++){
+            const tD = new Date(bD.getTime() + (i * msPer));
+            const sc = calcH(tD);
+            const col = sc > 75 ? 'var(--slack-green)' : sc > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
+            const b = document.createElement('div');
+            b.className = 'chart-box';
+            b.style.background = col;
+            b.onclick = () => {
+                workDate = new Date(tD.getTime()); isFitMode = true;
                 document.getElementById('hourVal').value = workDate.getHours();
                 document.getElementById('minVal').value = workDate.getMinutes() === 30 ? "30" : "00";
                 render(); 
             };
-            grid.appendChild(box);
+            g.appendChild(b);
         }
     }
 
-    function calculateSpecificHarmony(tTime) {
-        const activeTeam = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
-        if(!activeTeam.length) return 0;
-        let workCount = 0;
-        const uZ = tTime.getTime() + (tTime.getTimezoneOffset() * 60000);
-        activeTeam.forEach(m => {
+    function calcH(t) {
+        const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
+        if(!filtered.length) return 0;
+        let count = 0;
+        const uZ = t.getTime() + (t.getTimezoneOffset() * 60000);
+        filtered.forEach(m => {
             const loc = locationData[m.loc];
-            const local = new Date(uZ + (loc.offset * 3600000));
-            if(getStatus(local).work) workCount++;
+            if(loc && getStatus(new Date(uZ + (loc.offset * 3600000))).work) count++;
         });
-        return Math.round((workCount / activeTeam.length) * 100);
+        return Math.round((count / filtered.length) * 100);
     }
 
     function render() {
@@ -281,22 +280,21 @@
             if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] };
             groups[label].cities.push(name);
         });
-        const groundZero = ref.getTime() + (ref.getTimezoneOffset() * 60000);
-        Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzKey => {
-            const g = groups[tzKey];
-            const localTime = new Date(groundZero + (g.offset * 3600000));
+        const gZ = ref.getTime() + (ref.getTimezoneOffset() * 60000);
+        Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
+            const g = groups[tzK];
+            const localTime = new Date(gZ + (g.offset * 3600000));
             const status = getStatus(localTime);
-            const dStr = localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            const tStr = localTime.getHours().toString().padStart(2,'0') + ":" + localTime.getMinutes().toString().padStart(2,'0');
-            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzKey}</span><span>${dStr} ${tStr}</span></div>`;
+            const dS = localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const tS = localTime.getHours().toString().padStart(2,'0') + ":" + localTime.getMinutes().toString().padStart(2,'0');
+            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${dS} ${tS}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
-                    const locMeta = locationData[loc];
-                    if (locMeta) {
-                        const mateLocalTime = new Date(groundZero + (locMeta.offset * 3600000));
-                        const s = getStatus(mateLocalTime);
+                    const lM = locationData[loc];
+                    if (lM) {
+                        const s = getStatus(new Date(gZ + (lM.offset * 3600000)));
                         tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                     }
                 });
@@ -305,15 +303,12 @@
             container.innerHTML += tzHtml + `</div>`;
         });
         
-        let total = 0, available = 0;
+        let t = 0, av = 0;
         team.forEach(m => { 
-            const locMeta = locationData[m.loc];
-            if (locMeta) {
-                total++;
-                if(getStatus(new Date(groundZero + (locMeta.offset * 3600000))).work) available++; 
-            }
+            const lM = locationData[m.loc];
+            if (lM) { t++; if(getStatus(new Date(gZ + (lM.offset * 3600000))).work) av++; }
         });
-        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0%";
+        document.getElementById('predictVal').innerText = t > 0 ? Math.round((av/t)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
 
