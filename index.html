@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Final Control Engine</title>
+    <title>Loom | Ultimate Sync Engine</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --slack-purple: #4A154B;
-            --slack-navy: #3F0E40;
-            --slack-green: #2EB67D;
-            --status-weekend: #A0A0A0;
-            --night-wash: rgba(10, 15, 30, 0.75);
+            --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-green: #2EB67D;
+            --status-weekend: #A0A0A0; --night-wash: rgba(10, 15, 30, 0.75);
+            --status-lunch: #ECB22E; --status-snooze: #E01E5A;
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: white; overflow: hidden; }
         #app-shell { display: flex; height: 100%; width: 100%; }
@@ -22,22 +20,27 @@
         .mgmt-input { width: 90%; margin: 5px 5%; padding: 10px; border-radius: 4px; border: none; font-size: 0.9rem; }
         .btn-action { width: 90%; margin: 5px 5% 15px 5%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-        #member-groups { overflow-y: auto; flex-grow: 1; }
+        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 80px; }
         .tz-group { background: rgba(0,0,0,0.1); margin-bottom: 2px; }
-        .tz-header { padding: 12px; font-size: 0.75rem; font-weight: 800; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; }
+        .tz-header { padding: 12px; font-size: 0.75rem; font-weight: 800; background: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center; }
         
         .loc-card { border-bottom: 1px solid rgba(255,255,255,0.05); }
         .loc-header { padding: 10px 12px 5px 12px; font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-        .member-row { padding: 6px 12px 6px 25px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; opacity: 0.9; }
+        .member-row { padding: 6px 12px 6px 25px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
         
-        .btn-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; padding: 0 5px; }
+        .btn-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; }
         .tz-header:hover .btn-del, .loc-header:hover .btn-del, .member-row:hover .btn-del { opacity: 0.8; }
-        .btn-del:hover { opacity: 1 !important; transform: scale(1.2); }
 
-        #map-area { flex-grow: 1; position: relative; background: #000; }
+        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        #map-area { flex-grow: 1; position: relative; background: #000; overflow: hidden; }
         #map-bg { width: 100%; height: 100%; background: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg') center/cover; filter: saturate(0.5) brightness(0.7); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        .map-grid-text { font-size: 9px; font-weight: 900; paint-order: stroke; stroke: black; stroke-width: 2px; }
         .pin-lbl { font-size: 9px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 2px; }
+
+        #scheduler { padding: 15px 20px; background: #fff; border-top: 1px solid #ddd; display: flex; gap: 15px; align-items: center; justify-content: center; z-index: 100; }
+        .sched-control { border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -45,26 +48,33 @@
 <div id="app-shell">
     <aside id="sidebar">
         <div class="sidebar-header"><h2>LOOM</h2></div>
-        
         <div style="padding-top: 10px;">
             <input type="text" id="cityInput" class="mgmt-input" placeholder="City Name (e.g. Pune)">
             <button onclick="lookupCity()" class="btn-action" style="background: white; color: var(--slack-purple);">ADD OFFICE</button>
-            
             <input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name">
             <select id="newLoc" class="mgmt-input" style="background: rgba(255,255,255,0.1); color: white;"></select>
             <button onclick="addMember()" class="btn-action" style="background: var(--slack-green); color: white;">ADD TEAMMATE</button>
         </div>
-
         <div id="member-groups"></div>
     </aside>
 
-    <main id="map-area">
-        <div id="map-bg"></div>
-        <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
-            <g id="day-night-layer"></g>
-            <g id="grid-layer"></g>
-            <g id="marker-layer"></g>
-        </svg>
+    <main id="main-view-container">
+        <div id="map-area">
+            <div id="map-bg"></div>
+            <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
+                <g id="day-night-layer"></g>
+                <g id="grid-layer"></g>
+                <g id="marker-layer"></g>
+            </svg>
+        </div>
+        <footer id="scheduler">
+            <input type="date" id="schedDate" class="sched-control">
+            <input type="number" id="hourVal" class="sched-control" style="width:50px;" placeholder="HH">
+            <input type="number" id="minVal" class="sched-control" style="width:50px;" placeholder="MM">
+            <button onclick="setFitMode(true)" class="sched-control" style="background:var(--slack-purple); color:white; border:none; cursor:pointer;">SIMULATE</button>
+            <button onclick="resetToLive()" class="sched-control" style="cursor:pointer;">LIVE</button>
+            <div id="predictVal" style="font-weight:900; color:var(--slack-purple); margin-left:10px;">0% Harmony</div>
+        </footer>
     </main>
 </div>
 
@@ -74,9 +84,10 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let locationData = {}; let team = [];
+    let isFitMode = false; let workDate = new Date();
 
     const TZ_REGISTRY = {
-        "pune": "Asia/Kolkata", "bengaluru": "Asia/Kolkata", "hyderabad": "Asia/Kolkata", "mumbai": "Asia/Kolkata",
+        "pune": "Asia/Kolkata", "bengaluru": "Asia/Kolkata", "hyderabad": "Asia/Kolkata", "chennai": "Asia/Kolkata",
         "chicago": "America/Chicago", "new york": "America/New_York", "san francisco": "America/Los_Angeles",
         "london": "Europe/London", "dubai": "Asia/Dubai", "singapore": "Asia/Singapore"
     };
@@ -87,24 +98,25 @@
         locationData = {};
         if(locs) locs.forEach(l => { locationData[l.name] = l; });
         team = members || [];
-        render();
+        populateLocDropdown(); render();
     }
 
     async function lookupCity() {
         const input = document.getElementById('cityInput').value.trim();
         if (!input) return;
-        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`);
-        const data = await resp.json();
-        if (data && data[0]) {
-            const res = data[0];
-            const name = input.charAt(0).toUpperCase() + input.slice(1).toLowerCase();
+        const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`);
+        const geoData = await geoResp.json();
+        if (geoData && geoData[0]) {
+            const res = geoData[0];
             const tzId = TZ_REGISTRY[input.toLowerCase()] || "UTC";
             let code = input.substring(0,3).toUpperCase();
             if(input.toLowerCase() === "pune") code = "PNQ";
+            if(input.toLowerCase() === "bengaluru") code = "BLR";
 
             const { data: { user } } = await _supabase.auth.getUser();
             await _supabase.from('locations').upsert({ 
-                name, code, lon: parseFloat(res.lon), lat: parseFloat(res.lat), 
+                name: input.charAt(0).toUpperCase() + input.slice(1).toLowerCase(), 
+                code, lon: parseFloat(res.lon), lat: parseFloat(res.lat), 
                 tz_id: tzId, user_id: user.id 
             });
             document.getElementById('cityInput').value = ''; loadData();
@@ -121,100 +133,128 @@
         }
     }
 
-    // DELETE FUNCTIONS
+    async function deleteLoc(name) { if(confirm(`Delete ${name}?`)) { await _supabase.from('locations').delete().eq('name', name); loadData(); } }
+    async function deleteMember(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
     async function deleteFullTzGroup(tzId) {
-        if(!confirm(`Delete all offices in ${tzId}?`)) return;
-        const citiesToDelete = Object.values(locationData).filter(l => l.tz_id === tzId).map(l => l.name);
-        await _supabase.from('locations').delete().in('name', citiesToDelete);
-        loadData();
+        if(!confirm(`Delete all in ${tzId}?`)) return;
+        const cities = Object.values(locationData).filter(l => l.tz_id === tzId).map(l => l.name);
+        await _supabase.from('locations').delete().in('name', cities); loadData();
     }
 
-    async function deleteLoc(name) {
-        if(!confirm(`Delete office in ${name}?`)) return;
-        await _supabase.from('locations').delete().eq('name', name);
-        loadData();
+    function populateLocDropdown() {
+        const sel = document.getElementById('newLoc'); sel.innerHTML = '';
+        Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
     }
 
-    async function deleteMember(id) {
-        await _supabase.from('teammates').delete().eq('id', id);
-        loadData();
+    function getStatus(baseDate, tzId) {
+        const local = new Date(baseDate.toLocaleString("en-US", {timeZone: tzId}));
+        const hr = local.getHours();
+        const day = local.getDay();
+        if ([0, 6].includes(day)) return { emoji: "🏖️", color: "var(--status-weekend)", work: false };
+        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
+        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--slack-green)", work: true };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
+        return { emoji: "🏠", color: "var(--slack-blue)", work: false };
     }
 
     function render() {
-        const container = document.getElementById('member-groups');
-        const dropdown = document.getElementById('newLoc');
-        container.innerHTML = ''; dropdown.innerHTML = '';
-        
+        const ref = isFitMode ? workDate : new Date();
+        const container = document.getElementById('member-groups'); container.innerHTML = '';
         const groups = {};
         Object.keys(locationData).forEach(name => {
             const loc = locationData[name];
             if(!groups[loc.tz_id]) groups[loc.tz_id] = { id: loc.tz_id, cities: [] };
             groups[loc.tz_id].cities.push(loc);
-            const opt = document.createElement('option'); opt.value = name; opt.textContent = name; dropdown.appendChild(opt);
         });
 
+        let total = team.length, available = 0;
         Object.keys(groups).forEach(tzId => {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { timeZone: tzId, hour12: false, hour: '2-digit', minute: '2-digit', weekday: 'short', month: 'short', day: 'numeric' });
-            const tzCode = new Intl.DateTimeFormat('en-US', { timeZone: tzId, timeZoneName: 'short' }).formatToParts(now).find(p => p.type === 'timeZoneName').value;
+            const timeStr = ref.toLocaleTimeString('en-US', { timeZone: tzId, hour12: false, hour: '2-digit', minute: '2-digit', weekday: 'short', month: 'short', day: 'numeric' });
+            const tzCode = new Intl.DateTimeFormat('en-US', { timeZone: tzId, timeZoneName: 'short' }).formatToParts(ref).find(p => p.type === 'timeZoneName').value;
             
-            let html = `<div class="tz-group">
-                <div class="tz-header">
-                    <span>${tzCode} • ${timeStr}</span>
-                    <span class="btn-del" onclick="deleteFullTzGroup('${tzId}')">×</span>
-                </div>`;
-            
+            let html = `<div class="tz-group"><div class="tz-header"><span>${tzCode} • ${timeStr}</span><span class="btn-del" onclick="deleteFullTzGroup('${tzId}')">×</span></div>`;
             groups[tzId].cities.forEach(city => {
                 const mates = team.filter(t => t.location_name === city.name);
-                html += `<div class="loc-card">
-                    <div class="loc-header">
-                        <span>${city.name}</span>
-                        <span class="btn-del" onclick="deleteLoc('${city.name}')">×</span>
-                    </div>`;
+                html += `<div class="loc-card"><div class="loc-header"><span>${city.name}</span><span class="btn-del" onclick="deleteLoc('${city.name}')">×</span></div>`;
                 mates.forEach(m => {
-                    html += `<div class="member-row">
-                        <span>${m.name}</span>
-                        <span class="btn-del" onclick="deleteMember('${m.id}')">×</span>
-                    </div>`;
+                    const s = getStatus(ref, tzId); if(s.work) available++;
+                    html += `<div class="member-row"><span>${m.name}</span><span>${s.emoji} <span class="btn-del" onclick="deleteMember('${m.id}')">×</span></span></div>`;
                 });
                 html += `</div>`;
             });
             container.innerHTML += html + `</div>`;
         });
-        drawMap();
+        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0% Harmony";
+        drawMap(ref);
     }
 
-    function drawMap() {
-        const markers = document.getElementById('marker-layer');
-        const night = document.getElementById('day-night-layer');
-        markers.innerHTML = ''; night.innerHTML = '';
+    function addGridLine(x, text, color, parent) {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        l.setAttribute("x1", x); l.setAttribute("y1", 0); l.setAttribute("x2", x); l.setAttribute("y2", 400);
+        l.setAttribute("stroke", color); l.setAttribute("stroke-dasharray", "4");
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("x", x + 3); t.setAttribute("y", 20); t.setAttribute("fill", color); t.setAttribute("class", "map-grid-text");
+        t.textContent = text;
+        g.appendChild(l); g.appendChild(t); parent.appendChild(g);
+    }
 
-        const utcHr = new Date().getUTCHours() + (new Date().getUTCMinutes()/60);
-        
-        // Accurate Day/Night Overlay
+    function drawMap(refDate) {
+        const night = document.getElementById('day-night-layer');
+        const grid = document.getElementById('grid-layer');
+        const markers = document.getElementById('marker-layer');
+        night.innerHTML = ''; grid.innerHTML = ''; markers.innerHTML = '';
+
+        const utcHr = refDate.getUTCHours() + (refDate.getUTCMinutes()/60);
         const nightStart = ((utcHr + 6) % 24) * (800/24);
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", nightStart); rect.setAttribute("y", 0); rect.setAttribute("width", 400); rect.setAttribute("height", 400);
+        rect.setAttribute("x", nightStart); rect.setAttribute("width", 400); rect.setAttribute("height", 400);
         rect.setAttribute("fill", "var(--night-wash)"); night.appendChild(rect);
 
-        // Sun & Moon Icons
+        // Grid Lines (Login, Lunch, etc)
+        for(let i=0; i<24; i++) {
+            const x = i * (800/24);
+            const hr = Math.floor((i - utcHr + 24) % 24);
+            if(hr === 9) addGridLine(x, "LOGIN", "var(--slack-green)", grid);
+            if(hr === 13) addGridLine(x, "LUNCH", "var(--status-lunch)", grid);
+            if(hr === 17) addGridLine(x, "LOGOUT", "var(--slack-green)", grid);
+            if(hr === 22) addGridLine(x, "SNOOZE", "var(--status-snooze)", grid);
+        }
+
+        // Sun/Moon
         const sunX = ((12 - utcHr + 24) % 24) * (800/24);
+        const moonX = ((24 - utcHr + 24) % 24) * (800/24);
         const sun = document.createElementNS("http://www.w3.org/2000/svg", "text");
         sun.setAttribute("x", sunX); sun.setAttribute("y", 380); sun.setAttribute("font-size", "20px"); sun.textContent = "☀️";
-        night.appendChild(sun);
+        const moon = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        moon.setAttribute("x", moonX); moon.setAttribute("y", 380); moon.setAttribute("font-size", "20px"); moon.textContent = "🌙";
+        grid.appendChild(sun); grid.appendChild(moon);
 
-        Object.values(locationData).forEach(loc => {
-            const px = (loc.lon + 180) * (800/360);
-            const py = (90 - loc.lat) * (400/180);
-            const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            circ.setAttribute("cx", px); circ.setAttribute("cy", py); circ.setAttribute("r", 3); circ.setAttribute("fill", "var(--slack-green)");
-            markers.appendChild(circ);
+        // Staggered Pins
+        const sorted = Object.values(locationData).sort((a,b) => a.lon - b.lon);
+        let lastX = -999; let lastH = 15;
+        sorted.forEach(loc => {
+            const px = (loc.lon + 180) * (800/360); const py = (90 - loc.lat) * (400/180);
+            let h = (Math.abs(px - lastX) < 30) ? (lastH === 15 ? 30 : 15) : 15;
+            lastX = px; lastH = h;
+            const needle = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            needle.setAttribute("x1", px); needle.setAttribute("y1", py); needle.setAttribute("x2", px); needle.setAttribute("y2", py - h);
+            needle.setAttribute("stroke", "white"); markers.appendChild(needle);
             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            txt.setAttribute("x", px + 5); txt.setAttribute("y", py + 3); txt.setAttribute("class", "pin-lbl");
+            txt.setAttribute("x", px + 3); txt.setAttribute("y", py - h); txt.setAttribute("class", "pin-lbl");
             txt.textContent = loc.code; markers.appendChild(txt);
         });
     }
 
+    function setFitMode(v) { 
+        const h = document.getElementById('hourVal').value || 0;
+        const m = document.getElementById('minVal').value || 0;
+        const d = document.getElementById('schedDate').value;
+        if(!d) return alert("Select a date.");
+        workDate = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`);
+        isFitMode = v; render(); 
+    }
+    function resetToLive() { isFitMode = false; render(); }
     loadData();
 </script>
 </body>
