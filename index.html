@@ -71,7 +71,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Strict IST Reference Anchor</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Locked IST Reference Anchor</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -167,17 +167,36 @@
         const d = new Date(utcTimeMS);
         const hr = d.getUTCHours();
         const day = d.getUTCDay();
-        if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--status-weekend)", work: false, snooze: false };
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, snooze: true };
-        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: false, snooze: false };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true, snooze: false };
-        return { emoji: "🏠", color: "var(--slack-blue)", work: false, snooze: false };
+        if (day === 0 || day === 6) return { color: "var(--status-weekend)", work: false, snooze: false, grey: true };
+        if (hr >= 22 || hr < 7) return { color: "var(--status-snooze)", work: false, snooze: true, grey: false };
+        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", work: false, snooze: false, grey: false };
+        if (hr >= 9 && hr < 17) return { color: "var(--slack-green)", work: true, snooze: false, grey: false };
+        return { color: "var(--slack-blue)", work: false, snooze: false, grey: false };
     }
 
     function toggleView(v) {
         isMatchViewActive = (v === 'rec');
         document.getElementById('map-area').style.display = v === 'map' ? 'block' : 'none';
         document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
+    }
+
+    // COMPLETELY REWRITTEN NEW MATCH FUNCTION
+    function getMatchColor(utcMS) {
+        const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
+        if(!filtered.length) return "var(--status-weekend)";
+        
+        let anyRedOrGrey = false;
+        let allGreen = true;
+        
+        for (const m of filtered) {
+            const s = getStatus(utcMS + (locationData[m.loc].offset * 3600000));
+            if (s.snooze || s.grey) { anyRedOrGrey = true; break; }
+            if (!s.work) allGreen = false;
+        }
+
+        if (anyRedOrGrey) return "var(--status-snooze)";
+        if (allGreen) return "var(--slack-green)";
+        return "var(--status-lunch)"; // Yellow
     }
 
     function buildMatchChart() {
@@ -220,73 +239,34 @@
             const istH = Math.floor(i * stepMs / 3600000);
             const istM = (i * stepMs / 60000) % 60;
             
-            // EXECUTE ABSOLUTE LOGIC PASS
-            const data = executeStrictMatchLogic(slotUTC_MS);
-            
-            results.push({ 
-                utc: slotUTC_MS, 
-                color: data.color, 
-                h: istH, m: istM, 
-                isGreen: data.isGreen,
-                isYellow: data.isYellow,
-                hasRed: data.hasRed,
-                score: data.score
-            });
+            const color = getMatchColor(slotUTC_MS);
+            results.push({ utc: slotUTC_MS, color, h: istH, m: istM });
 
             const box = document.createElement('div');
             box.className = 'chart-box';
-            box.style.background = data.color;
+            box.style.background = color;
             box.onclick = () => syncAndRender(slotUTC_MS, istH, istM);
             g.appendChild(box);
         }
 
-        // TIERED RECO: Green > Yellow
-        const sortedRecs = results.filter(r => !r.hasRed && (r.isGreen || r.isYellow)).sort((a, b) => {
-            if (a.isGreen && !b.isGreen) return -1;
-            if (!a.isGreen && b.isGreen) return 1;
-            return 0;
-        }).slice(0, 3);
+        // RECOMMENDATION Logic
+        const greenRecs = results.filter(r => r.color === "var(--slack-green)");
+        const yellowRecs = results.filter(r => r.color === "var(--status-lunch)");
+        const finalRecs = [...greenRecs, ...yellowRecs].slice(0, 3);
 
-        sortedRecs.forEach(r => {
+        finalRecs.forEach(r => {
             const btn = document.createElement('button'); btn.className = 'rec-btn';
-            btn.innerText = `${r.h.toString().padStart(2,'0')}:${r.m.toString().padStart(2,'0')} (${r.score}%)`;
+            btn.innerText = `${r.h.toString().padStart(2,'0')}:${r.m.toString().padStart(2,'0')}`;
             btn.onclick = () => syncAndRender(r.utc, r.h, r.m);
             recSlots.appendChild(btn);
         });
 
         const dLabel = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        if(sortedRecs.length > 0) {
-            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best IST slots are: ${sortedRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}. This time works for roughly ${sortedRecs[0].score}% of attendees!`;
+        if(finalRecs.length > 0) {
+            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best IST slots are: ${finalRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}.`;
         } else {
             document.getElementById('slack-msg').innerText = "No acceptable slots found for this date.";
         }
-    }
-
-    function executeStrictMatchLogic(utcMS) {
-        const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
-        if(!filtered.length) return { score: 0, color: 'var(--status-weekend)', hasRed: false, isGreen: false, isYellow: false };
-        
-        let foundRed = false;
-        let allGreen = true;
-        let foundGreen = false;
-        let workCount = 0;
-
-        // PASS 1: THE RED GAVEL
-        for (const m of filtered) {
-            const s = getStatus(utcMS + (locationData[m.loc].offset * 3600000));
-            if(s.snooze) { foundRed = true; break; }
-            if(s.work) { foundGreen = true; workCount++; } else { allGreen = false; }
-        }
-
-        const score = Math.round((workCount / filtered.length) * 100);
-
-        // PASS 2: THE BINARY DECISION
-        if (foundRed) return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
-        if (allGreen) return { score, color: 'var(--slack-green)', hasRed: false, isGreen: true, isYellow: false };
-        if (!foundGreen) return { score, color: 'var(--status-lunch)', hasRed: false, isGreen: false, isYellow: true };
-        
-        // MIXED CASE (Neither all-work nor all-awake-no-work) -> Failure Red
-        return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
@@ -317,7 +297,8 @@
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
                     const s = getStatus(refMS + (locationData[loc].offset * 3600000)); 
-                    tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${s.emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
+                    const emoji = s.grey ? "🏖️" : s.snooze ? "😴" : s.color === "var(--status-lunch)" ? "🍱" : s.work ? "💻" : "🏠";
+                    tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
             });
@@ -341,7 +322,8 @@
         const labels = document.getElementById('grid-label-layer');
         const markers = document.getElementById('marker-layer');
         night.innerHTML = labels.innerHTML = markers.innerHTML = '';
-        const utcHour = new Date(refMS).getUTCHours() + new Date(refMS).getUTCMinutes()/60;
+        const d = new Date(refMS);
+        const utcHour = d.getUTCHours() + d.getUTCMinutes()/60;
         for(let i=0; i<24; i++) {
             const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
             if (hrInt < 6 || hrInt >= 18) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r); }
