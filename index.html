@@ -44,10 +44,16 @@
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* Recommendation View Styling */
-        #rec-view { display: none; flex-grow: 1; background: #f9f9f9; padding: 40px; overflow-y: auto; }
-        .rec-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .rec-score { font-weight: 900; font-size: 1.5rem; color: var(--slack-purple); }
+        /* Day Match Chart Styling */
+        #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
+        .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
+        .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
+        .chart-grid { flex-grow: 1; display: flex; gap: 4px; }
+        .chart-box { flex: 1; height: 40px; border-radius: 4px; background: #eee; }
+        .match-row .chart-box { cursor: pointer; transition: 0.2s; border: 1px solid rgba(0,0,0,0.05); }
+        .match-row .chart-box:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 5; }
+        .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 12px; border-bottom: 2px solid #eee; padding-bottom: 8px; }
+        .chart-tick { flex: 1; font-size: 0.6rem; text-align: center; color: #aaa; font-weight: 900; }
 
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
@@ -93,27 +99,20 @@
         </div>
 
         <div id="rec-view">
-            <button onclick="toggleView('map')" style="margin-bottom:20px; padding:10px; cursor:pointer;">← Back to Map</button>
-            <h1 style="color:var(--slack-purple)">Best Meeting Times</h1>
-            <p id="rec-context" style="color:#666"></p>
-            <div id="rec-list"></div>
+            <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800; margin-bottom:20px;">← BACK TO MAP</button>
+            <h2 style="color:var(--slack-purple); margin:0 0 5px 0; font-weight: 900;">Day Match Chart</h2>
+            <p style="font-size:0.8rem; color:#666; margin-bottom:25px;">Toggle timezones to exclude. Click the <b>MATCH</b> row to update the roster view.</p>
+            <div id="chart-body"></div>
         </div>
 
         <footer id="scheduler">
             <input type="date" id="schedDate" style="padding:8px">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
-            <select id="minVal" style="padding:8px">
-                <option value="00">00</option>
-                <option value="30">30</option>
-            </select>
+            <select id="minVal" style="padding:8px"><option value="00">00</option><option value="30">30</option></select>
             <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
-            <select id="durVal" style="padding:8px">
-                <option value="30">30m</option>
-                <option value="60">1h</option>
-                <option value="90">1.5h</option>
-            </select>
+            <select id="durVal" style="padding:8px"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
-            <button onclick="showRecommendations()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST TIME</button>
+            <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
             <div id="predictVal" style="font-weight:900; margin-left:15px">0% Harmony</div>
         </footer>
@@ -127,6 +126,7 @@
 
     let locationData = {}; let team = [];
     let isFitMode = false; let workDate = new Date();
+    let chartExclusions = new Set();
 
     async function handleAuth() {
         const e = document.getElementById('auth-email').value;
@@ -136,8 +136,7 @@
     }
     async function checkSession() {
         const { data: { session } } = await _supabase.auth.getSession();
-        const overlay = document.getElementById('auth-overlay');
-        if (session) { if(overlay) overlay.style.display = 'none'; loadData(); }
+        if (session) { document.getElementById('auth-overlay').style.display = 'none'; loadData(); }
     }
     async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
@@ -158,13 +157,13 @@
         const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
         if (geo && geo[0]) {
             const apiKey = 'VW4CCUCGOI2M';
-            const tz = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
-            if(tz.status === 'OK') {
+            const tzResponse = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
+            if(tzResponse.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
                 await _supabase.from('locations').upsert({
                     name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(),
                     lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat),
-                    utc_offset: tz.gmtOffset / 3600, tz: tz.abbreviation, user_id: user.id
+                    utc_offset: tzResponse.gmtOffset / 3600, tz: tzResponse.abbreviation, user_id: user.id
                 }, { onConflict: 'user_id,name' });
                 document.getElementById('cityInput').value = ''; loadData();
             }
@@ -192,64 +191,88 @@
     function getStatus(localTime) {
         const hr = localTime.getHours();
         const day = localTime.getDay();
-        const isWeekend = (day === 0 || day === 6);
-        if (isWeekend) return { emoji: "🏖️", color: "var(--status-weekend)", work: false };
+        if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--status-weekend)", work: false };
         if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
         if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true };
         if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
         return { emoji: "🏠", color: "var(--slack-blue)", work: false };
     }
 
-    function calculateHarmony(refTime) {
-        if (team.length === 0) return 0;
-        let available = 0;
-        const utcGroundZero = refTime.getTime() + (refTime.getTimezoneOffset() * 60000);
-        team.forEach(m => {
-            const loc = locationData[m.loc];
-            if (loc) {
-                const mateLocalTime = new Date(utcGroundZero + (loc.offset * 3600000));
-                if (getStatus(mateLocalTime).work) available++;
-            }
-        });
-        return Math.round((available / team.length) * 100);
+    function toggleView(v) {
+        document.getElementById('map-area').style.display = v === 'map' ? 'block' : 'none';
+        document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
     }
 
-    function toggleView(view) {
-        document.getElementById('map-area').style.display = view === 'map' ? 'block' : 'none';
-        document.getElementById('rec-view').style.display = view === 'rec' ? 'block' : 'none';
-    }
+    function buildMatchChart() {
+        const dStr = document.getElementById('schedDate').value;
+        const bDate = dStr ? new Date(dStr + "T00:00:00") : new Date();
+        const body = document.getElementById('chart-body');
+        body.innerHTML = '';
 
-    function showRecommendations() {
-        const duration = parseInt(document.getElementById('durVal').value);
-        const start = new Date();
-        const results = [];
+        const uniqueTzs = [...new Set(Object.values(locationData).map(l => l.tz))];
+        const count = document.getElementById('minVal').value === "30" ? 48 : 24;
+        const step = (24/count) * 60 * 60000;
 
-        for (let i = 0; i < 48; i++) { // Check next 24 hours in 30min steps
-            const testTime = new Date(start.getTime() + (i * 30 * 60000));
-            const score = calculateHarmony(testTime);
-            results.push({ time: testTime, score: score });
-        }
+        let timeline = `<div class="chart-timeline">`;
+        for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
+        body.innerHTML += timeline + `</div>`;
 
-        const sorted = results.sort((a,b) => b.score - a.score).slice(0, 5);
-        
-        const list = document.getElementById('rec-list');
-        list.innerHTML = '';
-        document.getElementById('rec-context').innerText = `Scanned next 24 hours for a ${duration}m meeting.`;
-        
-        sorted.forEach(r => {
-            const card = document.createElement('div');
-            card.className = 'rec-card';
-            card.innerHTML = `
-                <div>
-                    <div style="font-weight:bold">${r.time.toLocaleDateString()}</div>
-                    <div style="font-size:1.2rem">${r.time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+        uniqueTzs.forEach(tzLabel => {
+            const tzMeta = Object.values(locationData).find(l => l.tz === tzLabel);
+            let row = `<div class="chart-row">
+                <div class="chart-label">
+                    <input type="checkbox" ${chartExclusions.has(tzLabel)?'':'checked'} onchange="toggleExclusion('${tzLabel}')">
+                    <span>${tzLabel}</span>
                 </div>
-                <div class="rec-score">${r.score}%</div>
-            `;
-            list.appendChild(card);
+                <div class="chart-grid">`;
+            for(let i=0; i<count; i++){
+                const d = new Date(bDate.getTime() + (i * step));
+                const local = new Date(d.getTime() + (d.getTimezoneOffset()*60000) + (tzMeta.offset * 3600000));
+                row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
+            }
+            body.innerHTML += row + `</div></div>`;
         });
 
+        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px;"><div class="chart-label" style="color:var(--slack-green); font-weight: 900;">MATCH</div><div class="chart-grid" id="match-row-grid"></div></div>`;
+        refreshMatchGrid(bDate, count, step);
         toggleView('rec');
+    }
+
+    function toggleExclusion(label) {
+        if(chartExclusions.has(label)) chartExclusions.delete(label); else chartExclusions.add(label);
+        buildMatchChart(); 
+    }
+
+    function refreshMatchGrid(bDate, count, step) {
+        const grid = document.getElementById('match-row-grid'); if(!grid) return;
+        grid.innerHTML = '';
+        for(let i=0; i<count; i++){
+            const tDate = new Date(bDate.getTime() + (i * step));
+            const score = calculateSpecificHarmony(tDate);
+            const color = score > 75 ? 'var(--slack-green)' : score > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
+            const box = document.createElement('div');
+            box.className = 'chart-box';
+            box.style.background = color;
+            box.onclick = () => {
+                workDate = new Date(tDate.getTime()); isFitMode = true;
+                document.getElementById('hourVal').value = workDate.getHours();
+                document.getElementById('minVal').value = workDate.getMinutes() === 30 ? "30" : "00";
+                render(); 
+            };
+            grid.appendChild(box);
+        }
+    }
+
+    function calculateSpecificHarmony(tTime) {
+        const activeTeam = team.filter(m => !chartExclusions.has(locationData[m.loc].tz));
+        if(!activeTeam.length) return 0;
+        let workCount = 0;
+        const uZ = tTime.getTime() + (tTime.getTimezoneOffset() * 60000);
+        activeTeam.forEach(m => {
+            const local = new Date(uZ + (locationData[m.loc].offset * 3600000));
+            if(getStatus(local).work) workCount++;
+        });
+        return Math.round((workCount / activeTeam.length) * 100);
     }
 
     function render() {
@@ -257,23 +280,23 @@
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         const groups = {};
         Object.keys(locationData).forEach(name => { 
-            const tzLabel = locationData[name].tz || "UTC";
-            if(!groups[tzLabel]) groups[tzLabel] = { offset: locationData[name].offset, cities: [] };
-            groups[tzLabel].cities.push(name);
+            const label = locationData[name].tz || "UTC";
+            if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] };
+            groups[label].cities.push(name);
         });
-        const utcGroundZero = ref.getTime() + (ref.getTimezoneOffset() * 60000);
-        Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tz => {
-            const g = groups[tz];
-            const localTime = new Date(utcGroundZero + (g.offset * 3600000));
+        const groundZero = ref.getTime() + (ref.getTimezoneOffset() * 60000);
+        Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzKey => {
+            const g = groups[tzKey];
+            const localTime = new Date(groundZero + (g.offset * 3600000));
             const status = getStatus(localTime);
-            const dateStr = localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            const timeStr = localTime.getHours().toString().padStart(2,'0') + ":" + localTime.getMinutes().toString().padStart(2,'0');
-            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tz}</span><span>${dateStr} ${timeStr}</span></div>`;
+            const dStr = localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const tStr = localTime.getHours().toString().padStart(2,'0') + ":" + localTime.getMinutes().toString().padStart(2,'0');
+            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzKey}</span><span>${dStr} ${tStr}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
-                    const mateLocalTime = new Date(utcGroundZero + (locationData[loc].offset * 3600000));
+                    const mateLocalTime = new Date(groundZero + (locationData[loc].offset * 3600000));
                     const s = getStatus(mateLocalTime);
                     tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
@@ -281,7 +304,10 @@
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-        document.getElementById('predictVal').innerText = calculateHarmony(ref) + "% Harmony";
+        // Sidebar Harmony uses standard calculation (unfiltered)
+        let total = team.length, available = 0;
+        team.forEach(m => { if(getStatus(new Date(groundZero + (locationData[m.loc].offset * 3600000))).work) available++; });
+        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
 
@@ -324,7 +350,8 @@
         Object.values(locationData).forEach(d => {
             const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white");
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); 
+            dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "rgba(0,0,0,0.4)");
             markers.appendChild(dot);
             const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
             t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl");
