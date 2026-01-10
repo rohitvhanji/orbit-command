@@ -3,155 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Weaving Scheduling Harmony</title>
+    <title>Loom | API-Synchronized Harmony</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --slack-purple: #4A154B;
-            --slack-navy: #3F0E40;
-            --slack-blue: #1264A3;
-            --slack-green: #2EB67D;
-            --slack-bg: #F0F2F5;
-            --slack-border: #E2E2E2;
-            --text-dark: #1D1C1D;
-            --text-muted: #616061;
-            --status-work: #2EB67D;
-            --status-lunch: #ECB22E;
-            --status-snooze: #E01E5A;
-            --night-wash: rgba(15, 23, 42, 0.45);
-            --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
+            --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
+            --slack-green: #2EB67D; --slack-bg: #F0F2F5; --slack-border: #E2E2E2;
+            --text-dark: #1D1C1D; --status-lunch: #ECB22E; --status-snooze: #E01E5A;
+            --night-wash: rgba(15, 23, 42, 0.45); --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: white; color: var(--text-dark);
-            overflow: hidden;
-        }
-
-        /* --- Auth Homepage Overlay --- */
-        #auth-overlay {
-            position: fixed; inset: 0; 
-            background: var(--loom-gradient);
-            z-index: 2000; display: flex; align-items: center; justify-content: center;
-            padding: 20px; overflow-y: auto;
-        }
-
-        .bg-mesh {
-            position: absolute; width: 150%; height: 150%;
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg');
-            background-size: cover; opacity: 0.05; filter: invert(1);
-            animation: drift 100s linear infinite;
-        }
-        @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .hero-container {
-            display: flex; width: 100%; max-width: 1100px;
-            align-items: center; justify-content: space-between; gap: 40px;
-            position: relative; z-index: 2;
-        }
-
-        .brand-section { flex: 1.2; text-align: left; color: white; }
-        .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
-        .brand-section p { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.9); margin-top: 20px; font-weight: 400; }
-
-        .auth-card {
-            flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px;
-        }
-
-        .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
-        .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
-        .btn-login { background: var(--slack-purple); color: white; }
-        .btn-signup { background: var(--slack-green); color: white; margin-top: 10px; }
-
-        /* --- Mobile View Switcher --- */
-        #view-switcher {
-            display: none; height: 50px; background: var(--slack-navy); color: white;
-            justify-content: space-around; align-items: center; z-index: 1001;
-        }
-        .view-tab { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 800; opacity: 0.6; text-transform: uppercase; cursor: pointer; padding: 15px 0; }
-        .view-tab.active { opacity: 1; border-bottom: 3px solid white; }
-
-        /* --- Sidebar & Layout --- */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
+        #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
         #app-shell { display: flex; height: 100%; width: 100%; }
-        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
-        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center;}
-        .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: white; text-transform: uppercase; }
-        
+        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; }
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; }
-        .mgmt-input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid transparent; color: white; border-radius: 4px; margin-bottom: 6px; }
-        
+        .mgmt-input { width: 100%; padding: 10px; border-radius: 4px; border: none; margin-bottom: 6px; box-sizing: border-box; background: rgba(255,255,255,0.1); color: white; }
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
-        .tz-header { padding: 8px 15px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; }
-        
+        .tz-header { padding: 8px 15px; font-size: 0.7rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; }
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .loc-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 700; }
-        
-        .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.2rem; color: rgba(255,255,255,0.4); padding: 0 5px; }
-        .loc-header:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
-
-        .member-row { padding: 8px 15px 8px 30px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
-
-        /* --- Map Area --- */
-        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; }
+        .loc-header { padding: 10px 15px; display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; }
+        .member-row { padding: 8px 15px 8px 30px; font-size: 0.85rem; display: flex; justify-content: space-between; }
+        .btn-standard-del { cursor: pointer; opacity: 0.4; font-size: 1.2rem; color: #ff4d4d; }
+        .btn-standard-del:hover { opacity: 1; }
+        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
-        #svg-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-        
-        .map-label-text { font-size: 10px; font-weight: 900; text-transform: uppercase; paint-order: stroke; stroke: white; stroke-width: 2.5px; }
+        #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 2.5px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
-
-        #scheduler { 
-            position: absolute; bottom: 0; left: 0; right: 0; 
-            padding: 12px; background: rgba(255,255,255,0.98); 
-            border-top: 1px solid var(--slack-border); display: flex; 
-            gap: 10px; align-items: center; justify-content: center; z-index: 1000;
-            flex-wrap: wrap;
-        }
-        .sched-control { border: 1px solid var(--slack-border); padding: 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+        #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
     </style>
 </head>
 <body>
 
 <div id="auth-overlay">
-    <div class="bg-mesh"></div>
-    <div class="hero-container">
-        <div class="brand-section">
-            <h1>loom</h1>
-            <p>Weaving scheduling harmony for global teams.</p>
-        </div>
-        <div class="auth-card">
-            <input type="email" id="auth-email" class="auth-input" placeholder="Email Address">
-            <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
-            <button class="btn-main btn-login" onclick="handleAuth('login')">Login to Loom</button>
-            <div style="text-align: center; color: #bbb; margin: 5px 0; font-size: 0.9rem;">— or —</div>
-            <button class="btn-main btn-signup" onclick="handleAuth('signup')">Start Weaving</button>
-            <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
-        </div>
+    <div class="auth-card">
+        <input type="email" id="auth-email" class="mgmt-input" placeholder="Email" style="color:black">
+        <input type="password" id="auth-pass" class="mgmt-input" placeholder="Password" style="color:black">
+        <button onclick="handleAuth()" style="padding:15px; background:var(--slack-purple); color:white; border:none; border-radius:8px; cursor:pointer;">LOGIN</button>
+        <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
     </div>
 </div>
 
 <div id="app-shell">
     <aside id="sidebar">
-        <div class="sidebar-header">
-            <h2>LOOM</h2>
-            <span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
-        </div>
+        <div class="sidebar-header"><h2>LOOM</h2><span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6;">Logout</span></div>
         <div class="mgmt-section">
-            <span class="mgmt-title">Add Office</span>
             <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
-            <button class="btn-main btn-login" style="padding: 10px; font-size: 0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
+            <button onclick="lookupCity()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:white; color:var(--slack-purple)">ADD OFFICE</button>
         </div>
         <div class="mgmt-section">
-            <span class="mgmt-title">Add Teammate</span>
             <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
-            <select id="newLoc" class="mgmt-input" style="background: rgba(255,255,255,0.15);"></select>
-            <button class="btn-main btn-signup" style="padding: 10px; font-size: 0.8rem;" onclick="addMember()">ADD TEAMMATE</button>
+            <select id="newLoc" class="mgmt-input"></select>
+            <button onclick="addMember()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:var(--slack-green); color:white;">ADD TEAMMATE</button>
         </div>
         <div id="member-groups"></div>
     </aside>
@@ -167,18 +74,12 @@
             </svg>
         </div>
         <footer id="scheduler">
-            <input type="date" id="schedDate" class="sched-control">
-            <div style="display:flex; align-items:center; gap:5px;">
-                <input type="number" id="hourVal" class="sched-control" style="width:45px;" placeholder="HH">
-                <b>:</b>
-                <input type="number" id="minVal" class="sched-control" style="width:45px;" placeholder="MM">
-            </div>
-            <button class="btn-main btn-login" style="width:auto; padding: 10px 15px; font-size: 0.75rem;" onclick="setFitMode(true)">SIMULATE</button>
-            <button class="btn-main" style="width:auto; padding: 10px 15px; background:#f0f0f0; color:#333; font-size: 0.75rem;" onclick="resetToLive()">LIVE</button>
-            <div style="border-left:1px solid #ddd; padding-left:15px; text-align:center;">
-                <div id="predictVal" style="font-size:1.1rem; font-weight:900;">0%</div>
-                <div style="font-size:0.5rem; text-transform:uppercase; color:#888; font-weight:800;">Harmony</div>
-            </div>
+            <input type="date" id="schedDate" style="padding:8px">
+            <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH">
+            <input type="number" id="minVal" style="width:45px; padding:8px" placeholder="MM">
+            <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
+            <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
+            <div id="predictVal" style="font-weight:900; margin-left:15px">0% Harmony</div>
         </footer>
     </main>
 </div>
@@ -188,27 +89,20 @@
     const SUPABASE_KEY = 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh'; 
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let locationData = {};
-    let team = [];
-    let isFitMode = false;
-    let workDate = new Date();
+    let locationData = {}; let team = [];
+    let isFitMode = false; let workDate = new Date();
 
-    async function handleAuth(type) {
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-pass').value;
-        const { data, error } = type === 'login' ? await _supabase.auth.signInWithPassword({ email, password }) : await _supabase.auth.signUp({ email, password });
+    async function handleAuth() {
+        const e = document.getElementById('auth-email').value;
+        const p = document.getElementById('auth-pass').value;
+        const { error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
         if (error) document.getElementById('auth-status').innerText = error.message; else checkSession();
     }
-    
     async function checkSession() {
         const { data: { session } } = await _supabase.auth.getSession();
-        if (session) {
-            const overlay = document.getElementById('auth-overlay');
-            if (overlay) overlay.style.display = 'none';
-            loadData();
-        }
+        const overlay = document.getElementById('auth-overlay');
+        if (session) { if(overlay) overlay.style.display = 'none'; loadData(); }
     }
-    
     async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
     async function loadData() {
@@ -223,28 +117,23 @@
     }
 
     async function lookupCity() {
-        const cityInput = document.getElementById('cityInput').value.trim();
-        if (!cityInput) return;
-        try {
-            const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityInput)}&limit=1`);
-            const geoData = await geoResp.json();
-            if (geoData && geoData.length > 0) {
-                const geo = geoData[0];
-                const apiKey = 'VW4CCUCGOI2M';
-                const tzResp = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`);
-                const tzData = await tzResp.json();
-
-                if (tzData.status === 'OK') {
-                    const offset = tzData.gmtOffset / 3600;
-                    const { data: { user } } = await _supabase.auth.getUser();
-                    const name = geo.display_name.split(',')[0];
-                    await _supabase.from('locations').upsert({ 
-                        name, code: name.substring(0,3).toUpperCase(), utc_offset: offset, lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), user_id: user.id, tz: tzData.abbreviation 
-                    }, { onConflict: 'user_id,name' });
-                    document.getElementById('cityInput').value = ''; loadData();
-                }
+        const input = document.getElementById('cityInput').value.trim();
+        if (!input) return;
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
+        if (geo && geo[0]) {
+            const apiKey = 'VW4CCUCGOI2M';
+            // FETCHING REAL TIME FROM API
+            const tz = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
+            if(tz.status === 'OK') {
+                const { data: { user } } = await _supabase.auth.getUser();
+                await _supabase.from('locations').upsert({
+                    name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(),
+                    lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat),
+                    utc_offset: tz.gmtOffset / 3600, tz: tz.abbreviation, user_id: user.id
+                }, { onConflict: 'user_id,name' });
+                document.getElementById('cityInput').value = ''; loadData();
             }
-        } catch (e) { console.error(e); }
+        }
     }
 
     async function addMember() {
@@ -257,8 +146,8 @@
         }
     }
 
-    async function removeLocation(name) { if(confirm(`Delete ${name}?`)) { await _supabase.from('locations').delete().eq('name', name); loadData(); } }
-    async function removeMember(dbId) { await _supabase.from('teammates').delete().eq('id', dbId); loadData(); }
+    async function removeLocation(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
+    async function removeMember(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
 
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc'); sel.innerHTML = '';
@@ -277,22 +166,28 @@
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         let total = team.length, available = 0;
         const groups = {};
+        
         Object.keys(locationData).forEach(name => { 
-            const tz = locationData[name].tz || "UTC"; 
-            if(!groups[tz]) groups[tz] = { offset: locationData[name].offset, cities: [] };
-            groups[tz].cities.push(name);
+            const tzLabel = locationData[name].tz || "UTC";
+            if(!groups[tzLabel]) groups[tzLabel] = { offset: locationData[name].offset, cities: [] };
+            groups[tzLabel].cities.push(name);
         });
 
+        // Use PURE UTC ground zero to prevent browser timezone leaks
+        const utcGroundZero = ref.getTime() + (ref.getTimezoneOffset() * 60000);
+
         Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tz => {
-            const sampleTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (groups[tz].offset * 3600000));
-            const status = getStatus(sampleTime.getHours());
-            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tz}</span><span>${sampleTime.getHours().toString().padStart(2,'0')}:00</span></div>`;
-            groups[tz].cities.forEach(loc => {
-                const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (locationData[loc].offset * 3600000));
+            const g = groups[tz];
+            const localTime = new Date(utcGroundZero + (g.offset * 3600000));
+            const status = getStatus(localTime.getHours());
+            
+            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tz}</span><span>${localTime.getHours().toString().padStart(2,'0')}:${localTime.getMinutes().toString().padStart(2,'0')}</span></div>`;
+            g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
-                    const s = getStatus(localTime.getHours());
+                    const mateLocalTime = new Date(utcGroundZero + (locationData[loc].offset * 3600000));
+                    const s = getStatus(mateLocalTime.getHours());
                     if(s.work) available++;
                     tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div><span>${s.emoji}</span><span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
@@ -300,7 +195,7 @@
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "%" : "0%";
+        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
 
@@ -308,8 +203,8 @@
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
-        line.setAttribute("stroke", color); line.setAttribute("stroke-width", "2"); line.setAttribute("stroke-dasharray", "4");
+        line.setAttribute("x1", x); line.setAttribute("y1", 0); line.setAttribute("x2", x); line.setAttribute("y2", 400);
+        line.setAttribute("stroke", color); line.setAttribute("stroke-dasharray", "4");
         txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
         txt.textContent = text;
         g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
@@ -317,10 +212,9 @@
 
     function drawMap(refDate) {
         const night = document.getElementById('day-night-layer');
-        const lines = document.getElementById('grid-lines-layer');
         const labels = document.getElementById('grid-label-layer');
         const markers = document.getElementById('marker-layer');
-        night.innerHTML = ''; lines.innerHTML = ''; labels.innerHTML = ''; markers.innerHTML = '';
+        night.innerHTML = labels.innerHTML = markers.innerHTML = '';
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         
         for(let i=0; i<24; i++) {
@@ -336,19 +230,15 @@
             else if (hrInt === 22) addNeedleLabel(x, "SNOOZE", "var(--status-snooze)", labels);
         }
 
-        // Add Sun and Moon centered
         const sunX = (((12 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
-        const sunIcon = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        sunIcon.setAttribute("x", sunX - 10); sunIcon.setAttribute("y", 200); sunIcon.setAttribute("font-size", "25");
-        sunIcon.textContent = "☀️"; markers.appendChild(sunIcon);
-
         const moonX = (((24 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
-        const moonIcon = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        moonIcon.setAttribute("x", moonX - 10); moonIcon.setAttribute("y", 200); moonIcon.setAttribute("font-size", "25");
-        moonIcon.textContent = "🌙"; markers.appendChild(moonIcon);
+        const sun = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        sun.setAttribute("x", sunX - 10); sun.setAttribute("y", 200); sun.setAttribute("font-size", "25"); sun.textContent = "☀️";
+        const moon = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 200); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
+        markers.appendChild(sun); markers.appendChild(moon);
 
-        Object.keys(locationData).forEach(loc => {
-            const d = locationData[loc];
+        Object.values(locationData).forEach(d => {
             const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white");
@@ -367,10 +257,8 @@
         workDate = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`);
         isFitMode = v; render(); 
     }
-    
-    function resetToLive() { isFitMode = false; workDate = new Date(); render(); }
-    
-    _supabase.auth.onAuthStateChange((event, session) => { checkSession(); });
+    function resetToLive() { isFitMode = false; render(); }
+    checkSession();
 </script>
 </body>
 </html>
