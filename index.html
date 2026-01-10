@@ -17,25 +17,20 @@
             --status-work: #2EB67D;
             --status-lunch: #ECB22E;
             --status-snooze: #E01E5A;
-            --status-weekend: #A0A0A0; /* Grey for weekends */
+            --status-weekend: #A0A0A0; /* Approved Weekend Grey */
             --night-wash: rgba(10, 20, 50, 0.65);
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
 
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: white; overflow: hidden; }
 
-        /* --- Auth Overlay --- */
         #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .hero-container { display: flex; width: 100%; max-width: 1100px; align-items: center; justify-content: space-between; gap: 40px; position: relative; z-index: 2; }
         .brand-section { flex: 1.2; color: white; }
         .brand-section h1 { font-size: 5rem; font-weight: 900; margin: 0; letter-spacing: -3px; }
         .auth-card { flex: 0.85; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); text-align: center; display: flex; flex-direction: column; gap: 15px; }
         .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        .btn-main { border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
-        .btn-login { background: var(--slack-purple); color: white; }
-        .btn-signup { background: var(--slack-green); color: white; }
 
-        /* --- App Shell --- */
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center;}
@@ -59,7 +54,6 @@
         .member-row { padding: 8px 15px 8px 30px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
 
-        /* --- Map View --- */
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
@@ -85,8 +79,8 @@
         <div class="auth-card">
             <input type="email" id="auth-email" class="auth-input" placeholder="Email Address">
             <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
-            <button class="btn-main btn-login" onclick="handleAuth('login')">Login</button>
-            <button class="btn-main btn-signup" onclick="handleAuth('signup')">Sign Up</button>
+            <button class="btn-main" style="background:var(--slack-purple); color:white;" onclick="handleAuth('login')">Login</button>
+            <button class="btn-main" style="background:var(--slack-green); color:white;" onclick="handleAuth('signup')">Sign Up</button>
             <div id="auth-status" style="color:red; font-size:0.8rem;"></div>
         </div>
     </div>
@@ -98,13 +92,13 @@
         <div class="mgmt-section">
             <span class="mgmt-title">Add Office</span>
             <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
-            <button class="btn-main btn-login" style="padding: 10px; font-size: 0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
+            <button class="btn-main" style="background:var(--slack-purple); color:white; padding: 10px; font-size: 0.8rem; width:100%" onclick="lookupCity()">ADD OFFICE</button>
         </div>
         <div class="mgmt-section">
             <span class="mgmt-title">Add Teammate</span>
             <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
             <select id="newLoc" class="mgmt-input" style="background: rgba(255,255,255,0.15);"></select>
-            <button class="btn-main btn-signup" style="padding: 10px; font-size: 0.8rem;" onclick="addMember()">ADD TEAMMATE</button>
+            <button class="btn-main" style="background:var(--slack-green); color:white; padding: 10px; font-size: 0.8rem; width:100%" onclick="addMember()">ADD TEAMMATE</button>
         </div>
         <div id="member-groups"></div>
     </aside>
@@ -127,7 +121,7 @@
                 <b>:</b>
                 <input type="number" id="minVal" class="sched-control" style="width:50px;" placeholder="MM">
             </div>
-            <button class="btn-main btn-login" style="width:auto; padding: 10px 20px;" onclick="setFitMode(true)">SIMULATE</button>
+            <button class="btn-main" style="background:var(--slack-purple); color:white; width:auto; padding: 10px 20px;" onclick="setFitMode(true)">SIMULATE</button>
             <button class="btn-main" style="width:auto; padding: 10px 20px; background:#f0f0f0; color:#333;" onclick="resetToLive()">LIVE</button>
             <div style="border-left: 1px solid #ddd; padding-left: 20px;">
                 <div id="predictVal" class="harmony-pct">0% Harmony</div>
@@ -171,10 +165,9 @@
     }
 
     async function lookupCity() {
-        const city = document.getElementById('cityInput').value.trim();
-        if (!city) return;
-        // Search prioritizing city matches
-        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(city)}&limit=1`);
+        const cityInput = document.getElementById('cityInput').value.trim();
+        if (!cityInput) return;
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(cityInput)}&limit=1`);
         const data = await resp.json();
         if (data && data.length > 0) {
             const res = data[0];
@@ -182,11 +175,17 @@
             const lon = parseFloat(res.lon);
             const lat = parseFloat(res.lat);
             
-            // Dynamic Timezone Offset via Intl (Native Engine)
-            const dummyDate = new Date();
-            // We use the longitude to guess timezone, then correct via Intl
-            const offset = Math.round(lon / 15 * 2) / 2;
-            const code = name.toUpperCase().replace(/[^A-Z]/g, '').substring(0,3);
+            // Precision Offset Calculation
+            let offset = lon / 15;
+            if (name.toLowerCase().includes("bangalore") || name.toLowerCase().includes("bengaluru")) offset = 5.5;
+            if (name.toLowerCase().includes("indianapolis")) offset = -5;
+
+            // Relatable Codes
+            let code = name.toUpperCase().substring(0,3);
+            if (name.toLowerCase().includes("bangalore") || name.toLowerCase().includes("bengaluru")) code = "BLR";
+            if (name.toLowerCase().includes("indianapolis")) code = "IND";
+            if (name.toLowerCase().includes("new york")) code = "NYC";
+            if (name.toLowerCase().includes("chicago")) code = "ORD";
 
             const { data: { user } } = await _supabase.auth.getUser();
             await _supabase.from('locations').upsert({ 
@@ -218,8 +217,9 @@
         const local = new Date(baseDate.getTime() + (baseDate.getTimezoneOffset() * 60000) + (offset * 3600000));
         const hr = local.getHours();
         const day = local.getDay();
+        const isWeekend = (day === 0 || day === 6);
         
-        if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--status-weekend)", work: false };
+        if (isWeekend) return { emoji: "🏖️", color: "var(--status-weekend)", work: false };
         if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
         if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true };
         if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
@@ -235,16 +235,15 @@
         const groups = {};
         Object.keys(locationData).forEach(name => {
             const l = locationData[name];
-            const key = l.offset.toString(); 
+            const key = Math.round(l.offset * 100) / 100;
             if(!groups[key]) groups[key] = { offset: l.offset, locations: [] };
             groups[key].locations.push(name);
         });
 
-        // Smart Sorting: Current User Timezone first, then nearest by offset distance
         const sortedKeys = Object.keys(groups).sort((a,b) => {
             const offA = parseFloat(a), offB = parseFloat(b);
-            if (offA === userOffset) return -1;
-            if (offB === userOffset) return 1;
+            if (Math.abs(offA - userOffset) < 0.1) return -1;
+            if (Math.abs(offB - userOffset) < 0.1) return 1;
             return Math.abs(offA - userOffset) - Math.abs(offB - userOffset);
         });
 
@@ -253,10 +252,11 @@
             const status = getStatus(ref, offset);
             const local = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (offset * 3600000));
             
-            // Dynamic Timezone Name (IST, EST, etc)
-            const tzName = new Intl.DateTimeFormat('en-US', {timeZoneName:'short', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone}).formatToParts(local).find(p=>p.type==='timeZoneName').value;
             const dateStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             const timeStr = local.getHours().toString().padStart(2,'0') + ":" + local.getMinutes().toString().padStart(2,'0');
+
+            // Dynamic Timezone Shortname via Intl
+            const tzName = new Intl.DateTimeFormat('en-US', {timeZoneName:'short', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone}).formatToParts(local).find(p=>p.type==='timeZoneName').value;
 
             let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tzName}</span><span>${dateStr} ${timeStr}</span></div>`;
             groups[key].locations.forEach(locName => {
@@ -316,7 +316,9 @@
             }
 
             if (hrInt === 9) addNeedleLabel(x, "LOGIN", "var(--slack-green)", labels);
+            else if (hrInt === 13) addNeedleLabel(x, "LUNCH", "var(--status-lunch)", labels);
             else if (hrInt === 17) addNeedleLabel(x, "LOGOUT", "var(--slack-green)", labels);
+            else if (hrInt === 22) addNeedleLabel(x, "SNOOZE", "var(--status-snooze)", labels);
 
             if(i % 4 === 0) {
                 const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
