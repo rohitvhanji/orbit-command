@@ -10,49 +10,49 @@
             --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
             --slack-green: #2EB67D; --slack-bg: #F0F2F5; --slack-border: #E2E2E2;
             --text-dark: #1D1C1D; --status-lunch: #ECB22E; --status-snooze: #E01E5A;
-            --night-wash: rgba(10, 15, 30, 0.85); 
-            --status-weekend: #888888;
+            --night-wash: rgba(10, 15, 30, 0.85); --status-weekend: #888888;
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
-        
         #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
-        
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; }
-        
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-input { width: 100%; padding: 10px; border-radius: 4px; border: none; margin-bottom: 6px; box-sizing: border-box; background: rgba(255,255,255,0.1); color: white; }
-        
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
         .tz-header { padding: 10px 15px; font-size: 0.7rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; }
-        
         .btn-hover-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; padding-left: 10px; }
         .tz-header:hover .btn-hover-del, .loc-header:hover .btn-hover-del, .member-row:hover .btn-hover-del { opacity: 1; }
-
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
         .loc-header { padding: 10px 15px 4px 15px; font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-        
         .member-row { padding: 6px 15px 6px 30px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
-        
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; height: 100%; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        
-        #rec-view { display: none; flex-grow: 1; background: white; padding: 30px; overflow-y: auto; }
-        .chart-row { display: flex; align-items: center; margin-bottom: 8px; }
-        .chart-label { width: 130px; font-size: 0.75rem; font-weight: 800; color: var(--slack-purple); display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+
+        /* Day Match Chart - Centered & Optimized */
+        #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
+        .chart-centered-content { max-width: 1200px; margin: 0 auto; }
+        .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box { width: 12px; height: 12px; border-radius: 2px; }
+        .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: flex; gap: 15px; align-items: center; }
+        .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; transition: 0.2s; }
+        .rec-btn:hover { background: var(--slack-green); color: white; border-color: var(--slack-green); }
+        .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
+        .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
         .chart-grid { flex-grow: 1; display: flex; gap: 4px; }
-        .chart-box { flex: 1; height: 35px; border-radius: 4px; background: #eee; }
-        .match-row .chart-box { cursor: pointer; transition: 0.2s; border: 1px solid rgba(0,0,0,0.05); }
-        .match-row .chart-box:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid var(--slack-purple); }
-        .chart-timeline { display: flex; margin-left: 130px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-        .chart-tick { flex: 1; font-size: 0.6rem; text-align: center; color: #888; font-weight: bold; }
+        .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; }
+        .match-row .chart-box { cursor: pointer; transition: 0.1s; border: 1px solid rgba(0,0,0,0.03); }
+        .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
+        .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .chart-tick { flex: 1; font-size: 0.6rem; text-align: center; color: #aaa; font-weight: 900; }
 
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
@@ -98,15 +98,36 @@
         </div>
 
         <div id="rec-view">
-            <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800; margin-bottom:20px;">← BACK TO MAP</button>
-            <h2 style="color:var(--slack-purple); margin:0 0 5px 0; font-weight: 900;">Day Match Chart</h2>
-            <div id="chart-body"></div>
+            <div class="chart-centered-content">
+                <div class="chart-header-row">
+                    <div>
+                        <h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2>
+                        <span style="font-size:0.75rem; color:#666;">Optimizing for checked timezones</span>
+                    </div>
+                    <div class="chart-legend">
+                        <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--status-snooze)"></div> Snooze</div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--status-weekend)"></div> Weekend</div>
+                    </div>
+                    <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
+                </div>
+
+                <div class="recommendation-panel" id="rec-panel">
+                    <span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">BEST SLOTS:</span>
+                    <div id="rec-slots" style="display:flex; gap:10px;"></div>
+                </div>
+
+                <div id="chart-body"></div>
+            </div>
         </div>
 
         <footer id="scheduler">
             <input type="date" id="schedDate" style="padding:8px">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
             <select id="minVal" style="padding:8px"><option value="00">00</option><option value="30">30</option></select>
+            <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
+            <select id="durVal" style="padding:8px"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
             <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
@@ -203,7 +224,8 @@
         const dS = document.getElementById('schedDate').value;
         const bD = dS ? new Date(dS + "T00:00:00") : new Date();
         const body = document.getElementById('chart-body');
-        body.innerHTML = '';
+        const recSlots = document.getElementById('rec-slots');
+        body.innerHTML = ''; recSlots.innerHTML = '';
 
         const uTzs = [...new Set(Object.values(locationData).map(l => l.tz))];
         const steps = document.getElementById('minVal').value === "30" ? 48 : 24;
@@ -216,47 +238,52 @@
         uTzs.forEach(tzL => {
             const m = Object.values(locationData).find(l => l.tz === tzL);
             let row = `<div class="chart-row">
-                <div class="chart-label">
-                    <input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')">
-                    <span>${tzL}</span>
-                </div>
+                <div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div>
                 <div class="chart-grid">`;
             for(let i=0; i<steps; i++){
-                const d = new Date(bD.getTime() + (i * msPer));
-                const local = new Date(d.getTime() + (d.getTimezoneOffset()*60000) + (m.offset * 3600000));
+                const local = new Date(bD.getTime() + (i * msPer) + (bD.getTimezoneOffset()*60000) + (m.offset * 3600000));
                 row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
             }
             body.innerHTML += row + `</div></div>`;
         });
 
-        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px;"><div class="chart-label" style="color:var(--slack-green); font-weight: 900;">MATCH</div><div class="chart-grid" id="m-grid"></div></div>`;
-        refreshM(bD, steps, msPer);
+        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px;"><div class="chart-label" style="color:var(--slack-green); font-weight:900;">MATCH</div><div class="chart-grid" id="m-grid"></div></div>`;
+        
+        const results = [];
+        const g = document.getElementById('m-grid');
+        for(let i=0; i<steps; i++){
+            const tD = new Date(bD.getTime() + (i * msPer));
+            const sc = calcH(tD);
+            results.push({ time: tD, score: sc });
+            const box = document.createElement('div');
+            box.className = 'chart-box';
+            box.style.background = sc > 75 ? 'var(--slack-green)' : sc > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
+            box.onclick = () => syncAndRender(tD);
+            g.appendChild(box);
+        }
+
+        // Add Recommendations
+        results.sort((a,b) => b.score - a.score).slice(0, 3).forEach(r => {
+            const btn = document.createElement('button');
+            btn.className = 'rec-btn';
+            btn.innerText = `${r.time.getHours().toString().padStart(2,'0')}:${r.time.getMinutes().toString().padStart(2,'0')} (${r.score}%)`;
+            btn.onclick = () => syncAndRender(r.time);
+            recSlots.appendChild(btn);
+        });
+
         toggleView('rec');
+    }
+
+    function syncAndRender(t) {
+        workDate = new Date(t.getTime()); isFitMode = true;
+        document.getElementById('hourVal').value = workDate.getHours();
+        document.getElementById('minVal').value = workDate.getMinutes() === 30 ? "30" : "00";
+        render();
     }
 
     function toggleEx(l) {
         if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l);
         buildMatchChart(); 
-    }
-
-    function refreshM(bD, steps, msPer) {
-        const g = document.getElementById('m-grid'); if(!g) return;
-        g.innerHTML = '';
-        for(let i=0; i<steps; i++){
-            const tD = new Date(bD.getTime() + (i * msPer));
-            const sc = calcH(tD);
-            const col = sc > 75 ? 'var(--slack-green)' : sc > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)';
-            const b = document.createElement('div');
-            b.className = 'chart-box';
-            b.style.background = col;
-            b.onclick = () => {
-                workDate = new Date(tD.getTime()); isFitMode = true;
-                document.getElementById('hourVal').value = workDate.getHours();
-                document.getElementById('minVal').value = workDate.getMinutes() === 30 ? "30" : "00";
-                render(); 
-            };
-            g.appendChild(b);
-        }
     }
 
     function calcH(t) {
@@ -266,7 +293,7 @@
         const uZ = t.getTime() + (t.getTimezoneOffset() * 60000);
         filtered.forEach(m => {
             const loc = locationData[m.loc];
-            if(loc && getStatus(new Date(uZ + (loc.offset * 3600000))).work) count++;
+            if(getStatus(new Date(uZ + (loc.offset * 3600000))).work) count++;
         });
         return Math.round((count / filtered.length) * 100);
     }
@@ -285,9 +312,7 @@
             const g = groups[tzK];
             const localTime = new Date(gZ + (g.offset * 3600000));
             const status = getStatus(localTime);
-            const dS = localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            const tS = localTime.getHours().toString().padStart(2,'0') + ":" + localTime.getMinutes().toString().padStart(2,'0');
-            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${dS} ${tS}</span></div>`;
+            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${localTime.getHours().toString().padStart(2,'0')}:${localTime.getMinutes().toString().padStart(2,'0')}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
