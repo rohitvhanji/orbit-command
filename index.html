@@ -44,16 +44,15 @@
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* Day Match Chart Styling */
-        #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
-        .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
-        .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
+        #rec-view { display: none; flex-grow: 1; background: white; padding: 30px; overflow-y: auto; }
+        .chart-row { display: flex; align-items: center; margin-bottom: 8px; }
+        .chart-label { width: 130px; font-size: 0.75rem; font-weight: 800; color: var(--slack-purple); display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
         .chart-grid { flex-grow: 1; display: flex; gap: 4px; }
-        .chart-box { flex: 1; height: 40px; border-radius: 4px; background: #eee; }
+        .chart-box { flex: 1; height: 35px; border-radius: 4px; background: #eee; }
         .match-row .chart-box { cursor: pointer; transition: 0.2s; border: 1px solid rgba(0,0,0,0.05); }
-        .match-row .chart-box:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 5; }
-        .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 12px; border-bottom: 2px solid #eee; padding-bottom: 8px; }
-        .chart-tick { flex: 1; font-size: 0.6rem; text-align: center; color: #aaa; font-weight: 900; }
+        .match-row .chart-box:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid var(--slack-purple); }
+        .chart-timeline { display: flex; margin-left: 130px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .chart-tick { flex: 1; font-size: 0.6rem; text-align: center; color: #888; font-weight: bold; }
 
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
@@ -101,7 +100,6 @@
         <div id="rec-view">
             <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800; margin-bottom:20px;">← BACK TO MAP</button>
             <h2 style="color:var(--slack-purple); margin:0 0 5px 0; font-weight: 900;">Day Match Chart</h2>
-            <p style="font-size:0.8rem; color:#666; margin-bottom:25px;">Toggle timezones to exclude. Click the <b>MATCH</b> row to update the roster view.</p>
             <div id="chart-body"></div>
         </div>
 
@@ -109,10 +107,8 @@
             <input type="date" id="schedDate" style="padding:8px">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
             <select id="minVal" style="padding:8px"><option value="00">00</option><option value="30">30</option></select>
-            <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
-            <select id="durVal" style="padding:8px"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
-            <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
+            <button onclick="showMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
             <div id="predictVal" style="font-weight:900; margin-left:15px">0% Harmony</div>
         </footer>
@@ -157,13 +153,13 @@
         const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
         if (geo && geo[0]) {
             const apiKey = 'VW4CCUCGOI2M';
-            const tzResponse = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
-            if(tzResponse.status === 'OK') {
+            const tzRes = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
+            if(tzRes.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
                 await _supabase.from('locations').upsert({
                     name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(),
                     lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat),
-                    utc_offset: tzResponse.gmtOffset / 3600, tz: tzResponse.abbreviation, user_id: user.id
+                    utc_offset: tzRes.gmtOffset / 3600, tz: tzRes.abbreviation, user_id: user.id
                 }, { onConflict: 'user_id,name' });
                 document.getElementById('cityInput').value = ''; loadData();
             }
@@ -203,7 +199,7 @@
         document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
     }
 
-    function buildMatchChart() {
+    function showMatchChart() {
         const dStr = document.getElementById('schedDate').value;
         const bDate = dStr ? new Date(dStr + "T00:00:00") : new Date();
         const body = document.getElementById('chart-body');
@@ -240,7 +236,7 @@
 
     function toggleExclusion(label) {
         if(chartExclusions.has(label)) chartExclusions.delete(label); else chartExclusions.add(label);
-        buildMatchChart(); 
+        showMatchChart(); 
     }
 
     function refreshMatchGrid(bDate, count, step) {
@@ -264,12 +260,13 @@
     }
 
     function calculateSpecificHarmony(tTime) {
-        const activeTeam = team.filter(m => !chartExclusions.has(locationData[m.loc].tz));
+        const activeTeam = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
         if(!activeTeam.length) return 0;
         let workCount = 0;
         const uZ = tTime.getTime() + (tTime.getTimezoneOffset() * 60000);
         activeTeam.forEach(m => {
-            const local = new Date(uZ + (locationData[m.loc].offset * 3600000));
+            const loc = locationData[m.loc];
+            const local = new Date(uZ + (loc.offset * 3600000));
             if(getStatus(local).work) workCount++;
         });
         return Math.round((workCount / activeTeam.length) * 100);
@@ -296,17 +293,26 @@
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
-                    const mateLocalTime = new Date(groundZero + (locationData[loc].offset * 3600000));
-                    const s = getStatus(mateLocalTime);
-                    tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
+                    const locMeta = locationData[loc];
+                    if (locMeta) {
+                        const mateLocalTime = new Date(groundZero + (locMeta.offset * 3600000));
+                        const s = getStatus(mateLocalTime);
+                        tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
+                    }
                 });
                 tzHtml += `</div>`;
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-        // Sidebar Harmony uses standard calculation (unfiltered)
-        let total = team.length, available = 0;
-        team.forEach(m => { if(getStatus(new Date(groundZero + (locationData[m.loc].offset * 3600000))).work) available++; });
+        
+        let total = 0, available = 0;
+        team.forEach(m => { 
+            const locMeta = locationData[m.loc];
+            if (locMeta) {
+                total++;
+                if(getStatus(new Date(groundZero + (locMeta.offset * 3600000))).work) available++; 
+            }
+        });
         document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
