@@ -34,6 +34,8 @@
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        /* Match Chart Styling */
         #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
         .chart-centered-content { max-width: 1200px; margin: 0 auto; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
@@ -51,6 +53,8 @@
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
         .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
         .chart-tick { flex: 1; font-size: 0.5rem; text-align: center; color: #aaa; font-weight: 900; }
+
+        /* Reverted Map Styles */
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
@@ -106,7 +110,7 @@
     let locationData = {}; let team = [];
     let isFitMode = false; let isMatchViewActive = false; let workDate = new Date();
     let chartExclusions = new Set();
-    const MY_OFFSET = 5.5; // Fixed IST anchor
+    const MY_OFFSET = 5.5; // IST 
 
     async function handleAuth() {
         const e = document.getElementById('auth-email').value;
@@ -201,7 +205,7 @@
             let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){
                 const tRef = new Date(bD.getTime() + (i * stepMs));
-                const utcMs = tRef.getTime() - (MY_OFFSET * 3600000); // Back to UTC
+                const utcMs = tRef.getTime() - (MY_OFFSET * 3600000); 
                 const local = new Date(utcMs + (m.offset * 3600000));
                 row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
             }
@@ -231,8 +235,8 @@
             recSlots.appendChild(btn);
         });
 
-        const dateStr = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. This time maybe works for ${sorted[0].score}% of attendees!`;
+        const dL = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dL}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. This time works for roughly ${sorted[0].score}% of attendees!`;
     }
 
     function calcMatchLogic(tIST) {
@@ -249,15 +253,15 @@
         });
 
         const score = Math.round((workCount / filtered.length) * 100);
-        if(hasRed) return { score, color: 'var(--status-snooze)' }; // Snooze Priority
-        if(allGreen) return { score, color: 'var(--slack-green)' }; // All Green Priority
-        return { score, color: 'var(--status-lunch)' }; // Mixed zone
+        if(hasRed) return { score, color: 'var(--status-snooze)' }; 
+        if(allGreen) return { score, color: 'var(--slack-green)' }; 
+        return { score, color: 'var(--status-lunch)' }; 
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
     
     function syncAndRender(tIST) { 
-        // Anchor fix: Subtrack IST offset to update global workDate
+        // CORRECT SYNC: Convert IST anchor back to UTC reference for global display
         const utcMs = tIST.getTime() - (MY_OFFSET * 3600000);
         workDate = new Date(utcMs); 
         isFitMode = true; 
@@ -329,7 +333,6 @@
         const m = parseInt(document.getElementById('minVal').value) || 0;
         const d = document.getElementById('schedDate').value;
         if(!d) return alert("Select a date.");
-        // UI uses IST, internal uses UTC
         const istMs = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`).getTime();
         workDate = new Date(istMs - (MY_OFFSET * 3600000));
         isFitMode = v; render(); 
