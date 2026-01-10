@@ -10,7 +10,7 @@
             --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
             --slack-green: #2EB67D; --slack-bg: #F0F2F5; --slack-border: #E2E2E2;
             --text-dark: #1D1C1D; --status-lunch: #ECB22E; --status-snooze: #E01E5A;
-            --night-wash: rgba(15, 23, 42, 0.45); --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
+            --night-wash: rgba(10, 15, 30, 0.7); --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
         
@@ -26,11 +26,8 @@
         
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
-        
-        /* Fixed Header: Name Left, Date Right */
         .tz-header { padding: 10px 15px; font-size: 0.7rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; }
         
-        /* Unified Delete Visibility Logic */
         .btn-hover-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; padding-left: 10px; }
         .tz-header:hover .btn-hover-del, .loc-header:hover .btn-hover-del, .member-row:hover .btn-hover-del { opacity: 1; }
 
@@ -219,8 +216,11 @@
                     const s = getStatus(localTime.getHours());
                     if(s.work) available++;
                     tzHtml += `<div class="member-row">
-                        <div><span class="status-dot" style="background:${s.color}"></span><span>${m.name} ${s.emoji}</span></div>
-                        <span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span>
+                        <div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div>
+                        <div style="display:flex; align-items:center;">
+                            <span>${s.emoji}</span>
+                            <span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span>
+                        </div>
                     </div>`; 
                 });
                 tzHtml += `</div>`;
@@ -237,7 +237,7 @@
         const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
         line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
         line.setAttribute("stroke", color); line.setAttribute("stroke-dasharray", "4");
-        txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
+        txt.setAttribute("x", x + 5); txt.setAttribute("y", 15); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
         txt.textContent = text;
         g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
     }
@@ -265,9 +265,9 @@
         const sunX = (((12 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
         const moonX = (((24 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
         const sun = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        sun.setAttribute("x", sunX - 10); sun.setAttribute("y", 200); sun.setAttribute("font-size", "25"); sun.textContent = "☀️";
+        sun.setAttribute("x", sunX - 10); sun.setAttribute("y", 350); sun.setAttribute("font-size", "25"); sun.textContent = "☀️";
         const moon = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 200); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
+        moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 350); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
         markers.appendChild(sun); markers.appendChild(moon);
 
         Object.values(locationData).forEach(d => {
