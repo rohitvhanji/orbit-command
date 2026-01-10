@@ -29,57 +29,30 @@
             overflow: hidden;
         }
 
-        /* --- Auth Homepage Overlay --- */
-        #auth-overlay {
-            position: fixed; inset: 0; 
-            background: var(--loom-gradient);
-            z-index: 2000; display: flex; align-items: center; justify-content: center;
-            padding: 20px; overflow-y: auto;
-        }
-
-        .bg-mesh {
-            position: absolute; width: 150%; height: 150%;
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg');
-            background-size: cover; opacity: 0.05; filter: invert(1);
-            animation: drift 100s linear infinite;
-        }
+        /* --- Auth Overlay --- */
+        #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+        .bg-mesh { position: absolute; width: 150%; height: 150%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: cover; opacity: 0.05; filter: invert(1); animation: drift 100s linear infinite; }
         @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .hero-container {
-            display: flex; width: 100%; max-width: 1100px;
-            align-items: center; justify-content: space-between; gap: 40px;
-            position: relative; z-index: 2;
-        }
-
+        .hero-container { display: flex; width: 100%; max-width: 1100px; align-items: center; justify-content: space-between; gap: 40px; position: relative; z-index: 2; }
         .brand-section { flex: 1.2; text-align: left; color: white; }
         .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
         .brand-section p { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.9); margin-top: 20px; font-weight: 400; }
-
-        .auth-card {
-            flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px;
-        }
-
+        .auth-card { flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
         .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
         .btn-login { background: var(--slack-purple); color: white; }
         .btn-signup { background: var(--slack-green); color: white; margin-top: 10px; }
 
-        /* --- Mobile View Switcher --- */
-        #view-switcher {
-            display: none; height: 50px; background: var(--slack-navy); color: white;
-            justify-content: space-around; align-items: center; z-index: 1001;
-        }
+        /* --- Mobile Switcher --- */
+        #view-switcher { display: none; height: 50px; background: var(--slack-navy); color: white; justify-content: space-around; align-items: center; z-index: 1001; }
         .view-tab { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 800; opacity: 0.6; text-transform: uppercase; cursor: pointer; padding: 15px 0; }
         .view-tab.active { opacity: 1; border-bottom: 3px solid white; }
 
-        /* --- Sidebar & Layout --- */
+        /* --- Layout --- */
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center;}
         .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: white; text-transform: uppercase; }
-        
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; }
         .mgmt-input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid transparent; color: white; border-radius: 4px; margin-bottom: 6px; }
@@ -87,50 +60,35 @@
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
         .tz-header { padding: 8px 15px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; }
-        
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
         .loc-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 700; }
         
-        .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.2rem; color: rgba(255,255,255,0.4); padding: 0 5px; }
+        /* Fixed Hover Logic */
+        .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.2rem; color: rgba(255,255,255,0.4); }
         .loc-header:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
 
         .member-row { padding: 8px 15px 8px 30px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
 
-        /* --- Map Area --- */
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         
+        /* Map Pin Design */
+        .pin { fill: white; stroke: var(--slack-purple); stroke-width: 2.5; }
         .map-label-text { font-size: 10px; font-weight: 900; text-transform: uppercase; paint-order: stroke; stroke: white; stroke-width: 2.5px; }
-        .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
+        .pin-lbl { font-size: 9px; font-weight: 900; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2.5px; }
 
-        #scheduler { 
-            position: absolute; bottom: 0; left: 0; right: 0; 
-            padding: 12px; background: rgba(255,255,255,0.98); 
-            border-top: 1px solid var(--slack-border); display: flex; 
-            gap: 10px; align-items: center; justify-content: center; z-index: 1000;
-            flex-wrap: wrap;
-        }
+        #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; flex-wrap: wrap; }
         .sched-control { border: 1px solid var(--slack-border); padding: 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
 
-        /* --- Media Queries for Mobile --- */
         @media (max-width: 768px) {
-            .hero-container { flex-direction: column; text-align: center; gap: 20px; }
-            .brand-section { text-align: center; }
-            .brand-section p { margin-bottom: 20px; }
-            
+            .hero-container { flex-direction: column; text-align: center; }
             #view-switcher { display: flex; }
-            #sidebar { 
-                position: absolute; width: 100%; height: calc(100% - 50px); top: 50px; left: 0; 
-                display: none; z-index: 1000; 
-            }
+            #sidebar { position: absolute; width: 100%; height: calc(100% - 50px); top: 50px; left: 0; display: none; z-index: 1000; }
             #sidebar.mobile-active { display: flex; }
             #main-view-container { height: calc(100% - 50px); }
-            
-            #scheduler { padding-bottom: 25px; }
-            .btn-main { padding: 12px; font-size: 1rem; }
         }
     </style>
 </head>
@@ -150,7 +108,6 @@
             <div style="text-align: center; color: #bbb; margin: 5px 0; font-size: 0.9rem;">— or —</div>
             <button class="btn-main btn-signup" onclick="handleAuth('signup')">Start Weaving</button>
             <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
-            <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">Experience effortless coordination for your distributed team.</p>
         </div>
     </div>
 </div>
@@ -168,7 +125,8 @@
         </div>
         <div class="mgmt-section">
             <span class="mgmt-title">Add Office</span>
-            <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
+            <input type="text" id="cityInput" list="city-suggestions" class="mgmt-input" placeholder="Type city name...">
+            <datalist id="city-suggestions"></datalist>
             <button class="btn-main btn-login" style="padding: 10px; font-size: 0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
         </div>
         <div class="mgmt-section">
@@ -221,24 +179,25 @@
     const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-5.5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
     function getTZName(offset) { const s = offset.toString(); return TZ_MAP[s] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
 
-    // --- Mobile Switcher Logic ---
+    // Mobile Switcher
     function switchView(view) {
         const sidebar = document.getElementById('sidebar');
-        const rosterTab = document.getElementById('tab-roster');
-        const mapTab = document.getElementById('tab-map');
-        
-        if (view === 'roster') {
-            sidebar.classList.add('mobile-active');
-            rosterTab.classList.add('active');
-            mapTab.classList.remove('active');
-        } else {
-            sidebar.classList.remove('mobile-active');
-            mapTab.classList.add('active');
-            rosterTab.classList.remove('active');
-        }
+        const tabs = document.querySelectorAll('.view-tab');
+        if (view === 'roster') { sidebar.classList.add('mobile-active'); tabs[0].classList.add('active'); tabs[1].classList.remove('active'); }
+        else { sidebar.classList.remove('mobile-active'); tabs[1].classList.add('active'); tabs[0].classList.remove('active'); }
     }
 
-    // --- Auth ---
+    // Auto-Suggestions for Cities
+    document.getElementById('cityInput').addEventListener('input', async (e) => {
+        const query = e.target.value;
+        if (query.length < 3) return;
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+        const data = await resp.json();
+        const list = document.getElementById('city-suggestions');
+        list.innerHTML = '';
+        data.forEach(item => { const opt = document.createElement('option'); opt.value = item.display_name.split(',')[0]; list.appendChild(opt); });
+    });
+
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
@@ -251,7 +210,6 @@
     }
     async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
-    // --- Data Management ---
     async function loadData() {
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
@@ -266,18 +224,16 @@
     async function lookupCity() {
         const city = document.getElementById('cityInput').value.trim();
         if (!city) return;
-        try {
-            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
-            const data = await resp.json();
-            if (data && data.length > 0) {
-                const res = data[0];
-                const offset = Math.round(parseFloat(res.lon) / 15 * 2) / 2;
-                const { data: { user } } = await _supabase.auth.getUser();
-                const name = res.display_name.split(',')[0];
-                await _supabase.from('locations').upsert({ name, code: name.substring(0,3).toUpperCase(), utc_offset: offset, lon: parseFloat(res.lon), lat: parseFloat(res.lat), user_id: user.id, tz: getTZName(offset) }, { onConflict: 'user_id,name' });
-                document.getElementById('cityInput').value = ''; loadData();
-            }
-        } catch (e) { console.error(e); }
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
+        const data = await resp.json();
+        if (data && data.length > 0) {
+            const res = data[0];
+            const offset = Math.round(parseFloat(res.lon) / 15 * 2) / 2;
+            const { data: { user } } = await _supabase.auth.getUser();
+            const name = res.display_name.split(',')[0];
+            await _supabase.from('locations').upsert({ name, code: name.substring(0,3).toUpperCase(), utc_offset: offset, lon: parseFloat(res.lon), lat: parseFloat(res.lat), user_id: user.id, tz: getTZName(offset) }, { onConflict: 'user_id,name' });
+            document.getElementById('cityInput').value = ''; loadData();
+        }
     }
 
     async function addMember() {
@@ -298,11 +254,16 @@
         Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
     }
 
-    function getStatus(hr) {
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
-        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
-        return { emoji: "🏠", color: "var(--slack-blue)", work: false };
+    function getStatus(date, offset) {
+        const localTime = new Date(date.getTime() + (date.getTimezoneOffset() * 60000) + (offset * 3600000));
+        const hr = localTime.getHours();
+        const day = localTime.getDay();
+        
+        if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--text-muted)", work: false, label: "Weekend" };
+        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, label: "Snooze" };
+        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true, label: "Lunch" };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--status-work)", work: true, label: "Work" };
+        return { emoji: "🏠", color: "var(--slack-blue)", work: false, label: "Off" };
     }
 
     function render() {
@@ -313,15 +274,16 @@
         Object.keys(locationData).forEach(name => { const tz = locationData[name].tz; if(!groups[tz]) groups[tz] = []; groups[tz].push(name); });
 
         Object.keys(groups).sort().forEach(tz => {
-            const sampleTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (locationData[groups[tz][0]].offset * 3600000));
-            const status = getStatus(sampleTime.getHours());
-            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tz}</span><span>${sampleTime.getHours().toString().padStart(2,'0')}:00</span></div>`;
+            const firstLoc = locationData[groups[tz][0]];
+            const status = getStatus(ref, firstLoc.offset);
+            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tz}</span><span>${status.label}</span></div>`;
             groups[tz].forEach(loc => {
-                const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (locationData[loc].offset * 3600000));
+                const d = locationData[loc];
+                const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (d.offset * 3600000));
                 const mates = team.filter(m => m.loc === loc);
-                tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div>`;
+                tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc} — ${localTime.getHours().toString().padStart(2,'0')}:${localTime.getMinutes().toString().padStart(2,'0')}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
-                    const s = getStatus(localTime.getHours());
+                    const s = getStatus(ref, d.offset);
                     if(s.work) available++;
                     tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div class="member-right-side"><span>${s.emoji}</span><span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
@@ -348,9 +310,9 @@
         const night = document.getElementById('day-night-layer');
         const lines = document.getElementById('grid-lines-layer');
         const labels = document.getElementById('grid-label-layer');
-        const text = document.getElementById('time-text-layer');
         const markers = document.getElementById('marker-layer');
-        night.innerHTML = ''; lines.innerHTML = ''; labels.innerHTML = ''; text.innerHTML = ''; markers.innerHTML = '';
+        const text = document.getElementById('time-text-layer');
+        night.innerHTML = ''; lines.innerHTML = ''; labels.innerHTML = ''; markers.innerHTML = ''; text.innerHTML = '';
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         
         for(let i=0; i<24; i++) {
@@ -365,9 +327,10 @@
             else if (hrInt === 17) addNeedleLabel(x, "WORK END", "var(--slack-green)", labels);
             else if (hrInt === 22) addNeedleLabel(x, "SNOOZE", "var(--status-snooze)", labels);
 
-            if(i % 4 === 0) {
+            if(i % 6 === 0) {
                 const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 t.setAttribute("x", x + 5); t.setAttribute("y", 15); t.setAttribute("class", "time-marker-txt");
+                t.setAttribute("fill", "rgba(255,255,255,0.4)");
                 t.textContent = `${hrInt}:00`; text.appendChild(t);
             }
         }
@@ -375,10 +338,10 @@
             const d = locationData[loc];
             const px = (d.lon + 180) * (2.222); const py = (90 - d.lat) * (2.222);
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("class", "pin");
+            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 3.5); dot.setAttribute("class", "pin");
             markers.appendChild(dot);
             const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl");
+            t.setAttribute("x", px + 6); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl");
             t.textContent = d.code; markers.appendChild(t);
         });
     }
@@ -393,6 +356,7 @@
     }
     function resetToLive() { isFitMode = false; workDate = new Date(); render(); }
     checkSession();
+    setInterval(() => { if(!isFitMode) render(); }, 60000);
 </script>
 </body>
 </html>
