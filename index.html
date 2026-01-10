@@ -14,11 +14,10 @@
             --slack-bg: #F0F2F5;
             --slack-border: #E2E2E2;
             --text-dark: #1D1C1D;
-            --text-muted: #616061;
             --status-work: #2EB67D;
             --status-lunch: #ECB22E;
             --status-snooze: #E01E5A;
-            --night-wash: rgba(10, 15, 40, 0.7); /* Deep blue-black night */
+            --night-wash: rgba(10, 20, 50, 0.6);
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
 
@@ -37,7 +36,7 @@
         .brand-section { flex: 1.2; text-align: left; color: white; }
         .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
         .auth-card { flex: 0.85; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
-        .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
+        .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; font-size: 1rem; outline: none; }
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
         .btn-signup { background: var(--slack-green); color: white; }
@@ -72,11 +71,12 @@
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         
-        /* Staggered Pins */
-        .pin-needle { stroke: var(--slack-purple); stroke-width: 1.5; }
-        .pin-head { fill: white; stroke: var(--slack-purple); stroke-width: 1.5; r: 2; }
-        .pin-lbl { font-size: 10px; font-weight: 900; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2.5px; }
+        .pin-needle { stroke: var(--slack-purple); stroke-width: 1; }
+        .pin-head { fill: white; stroke: var(--slack-purple); stroke-width: 1; r: 1.5; }
+        .pin-lbl { font-size: 8px; font-weight: 900; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
         .map-icon { font-size: 14px; }
+        .time-marker-txt { font-size: 10px; fill: white; opacity: 0.5; font-weight: 800; }
+        .map-label-text { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; paint-order: stroke; stroke: white; stroke-width: 2px; }
 
         #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px 20px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 15px; align-items: center; justify-content: center; z-index: 1000; }
         .sched-control { border: 1px solid var(--slack-border); padding: 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
@@ -121,6 +121,8 @@
             <div id="map-bg"></div>
             <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
                 <g id="day-night-layer"></g>
+                <g id="grid-lines-layer"></g>
+                <g id="time-text-layer"></g>
                 <g id="grid-label-layer"></g>
                 <g id="marker-layer"></g>
             </svg>
@@ -184,30 +186,17 @@
             const res = data[0];
             const lat = parseFloat(res.lat);
             const lon = parseFloat(res.lon);
-            
-            // Dynamic Timezone engine
-            const dummyDate = new Date();
-            const formatter = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-            const tzName = formatter.formatToParts(dummyDate).find(p => p.type === 'timeZoneName').value;
+            const name = res.display_name.split(',')[0];
             
             const offset = Math.round(lon / 15 * 2) / 2;
-            const code = generateRelatableCode(res.display_name.split(',')[0]);
+            const code = name.toUpperCase().replace(/[^A-Z]/g, '').substring(0,3);
 
             const { data: { user } } = await _supabase.auth.getUser();
             await _supabase.from('locations').upsert({ 
-                name: res.display_name.split(',')[0], 
-                code: code, utc_offset: offset, lon, lat, user_id: user.id, tz: tzName 
+                name: name, code: code, utc_offset: offset, lon, lat, user_id: user.id, tz: 'GMT' + (offset >= 0 ? '+' : '') + offset 
             });
             document.getElementById('cityInput').value = ''; loadData();
         }
-    }
-
-    function generateRelatableCode(name) {
-        const clean = name.toUpperCase().replace(/[^A-Z]/g, '');
-        const vowels = ['A','E','I','O','U'];
-        let consonants = clean.split('').filter(char => !vowels.includes(char));
-        if (consonants.length >= 3) return consonants.slice(0, 3).join('');
-        return clean.substring(0, 3);
     }
 
     async function addMember() {
@@ -247,7 +236,6 @@
         
         Object.keys(locationData).forEach(name => {
             const l = locationData[name];
-            // Precision key for grouping (5.5 is not 5.0)
             const key = l.offset.toString(); 
             if(!groups[key]) groups[key] = { label: l.tz, locations: [] };
             groups[key].locations.push(name);
@@ -257,7 +245,6 @@
             const offset = parseFloat(key);
             const status = getStatus(ref, offset);
             const local = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (offset * 3600000));
-            
             const timeStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + " " + 
                             local.getHours().toString().padStart(2,'0') + ":" + local.getMinutes().toString().padStart(2,'0');
 
@@ -281,62 +268,73 @@
         drawMap(ref);
     }
 
+    function addNeedleLabel(x, text, color, parent) {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        line.setAttribute("x1", x); line.setAttribute("y1", 20); line.setAttribute("x2", x); line.setAttribute("y2", 400);
+        line.setAttribute("stroke", color); line.setAttribute("stroke-width", "1"); line.setAttribute("stroke-dasharray", "4");
+        txt.setAttribute("x", x + 3); txt.setAttribute("y", 35); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
+        txt.textContent = text;
+        g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
+    }
+
     function drawMap(refDate) {
-        const nightLayer = document.getElementById('day-night-layer');
-        const markerLayer = document.getElementById('marker-layer');
-        const labelLayer = document.getElementById('grid-label-layer');
-        nightLayer.innerHTML = ''; markerLayer.innerHTML = ''; labelLayer.innerHTML = '';
+        const night = document.getElementById('day-night-layer');
+        const lines = document.getElementById('grid-lines-layer');
+        const textL = document.getElementById('time-text-layer');
+        const labels = document.getElementById('grid-label-layer');
+        const markers = document.getElementById('marker-layer');
+        night.innerHTML = ''; lines.innerHTML = ''; textL.innerHTML = ''; labels.innerHTML = ''; markers.innerHTML = '';
 
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         
-        // Day/Night and Sun/Moon logic
         for(let i=0; i<24; i++) {
-            const lon = (i*15)-180; const x = (lon+180)*2.222; 
-            const hrInt = Math.floor((24+utcHour+(lon/15))%24);
-            
+            const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
             if (hrInt < 6 || hrInt >= 18) {
                 const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 r.setAttribute("x", x); r.setAttribute("y", 0); r.setAttribute("width", 33.4); r.setAttribute("height", 400);
-                r.setAttribute("fill", "var(--night-wash)"); nightLayer.appendChild(r);
-                if (hrInt === 0) { // Midnight Moon
+                r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r);
+                if (hrInt === 0) {
                     const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    t.setAttribute("x", x + 8); t.setAttribute("y", 380); t.setAttribute("class", "map-icon");
-                    t.textContent = "🌙"; labelLayer.appendChild(t);
+                    t.setAttribute("x", x + 10); t.setAttribute("y", 380); t.setAttribute("class", "map-icon");
+                    t.textContent = "🌙"; labels.appendChild(t);
                 }
-            } else if (hrInt === 12) { // Noon Sun
+            } else if (hrInt === 12) {
                 const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                t.setAttribute("x", x + 8); t.setAttribute("y", 380); t.setAttribute("class", "map-icon");
-                t.textContent = "☀️"; labelLayer.appendChild(t);
+                t.setAttribute("x", x + 10); t.setAttribute("y", 380); t.setAttribute("class", "map-icon");
+                t.textContent = "☀️"; labels.appendChild(t);
+            }
+
+            if (hrInt === 9) addNeedleLabel(x, "START", "var(--slack-green)", labels);
+            else if (hrInt === 13) addNeedleLabel(x, "LUNCH", "var(--status-lunch)", labels);
+            else if (hrInt === 17) addNeedleLabel(x, "END", "var(--slack-green)", labels);
+            else if (hrInt === 22) addNeedleLabel(x, "SNOOZE", "var(--status-snooze)", labels);
+
+            if(i % 4 === 0) {
+                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                t.setAttribute("x", x + 4); t.setAttribute("y", 15); t.setAttribute("class", "time-marker-txt");
+                t.textContent = `${hrInt}:00`; textL.appendChild(t);
             }
         }
 
-        // Staggered Pin Logic
-        const sortedLocs = Object.values(locationData).sort((a,b) => a.lon - b.lon);
-        let lastLon = -999;
-        let lastHeight = 15;
+        const sorted = Object.values(locationData).sort((a,b) => a.lon - b.lon);
+        let lastX = -999; let lastH = 15;
+        sorted.forEach(d => {
+            const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
+            let h = 15;
+            if (Math.abs(px - lastX) < 35) h = lastH === 15 ? 30 : (lastH === 30 ? 45 : 15);
+            lastX = px; lastH = h;
 
-        sortedLocs.forEach(d => {
-            const px = (d.lon + 180) * 2.222;
-            const py = (90 - d.lat) * 2.222;
-            
-            // Proximity check for staggering (approx 40px threshold)
-            let height = 15;
-            if (Math.abs(px - lastLon) < 40) {
-                height = lastHeight === 15 ? 35 : (lastHeight === 35 ? 55 : 15);
-            }
-            lastLon = px; lastHeight = height;
-
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("x1", px); line.setAttribute("y1", py); line.setAttribute("x2", px); line.setAttribute("y2", py - height);
-            line.setAttribute("class", "pin-needle"); markerLayer.appendChild(line);
-
-            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py - height); dot.setAttribute("class", "pin-head");
-            markerLayer.appendChild(dot);
-
+            const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            l.setAttribute("x1", px); l.setAttribute("y1", py); l.setAttribute("x2", px); l.setAttribute("y2", py - h);
+            l.setAttribute("class", "pin-needle"); markers.appendChild(l);
+            const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            c.setAttribute("cx", px); c.setAttribute("cy", py - h); c.setAttribute("class", "pin-head");
+            markers.appendChild(c);
             const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            t.setAttribute("x", px + 4); t.setAttribute("y", py - height + 3); t.setAttribute("class", "pin-lbl");
-            t.textContent = d.code; markerLayer.appendChild(t);
+            t.setAttribute("x", px + 4); t.setAttribute("y", py - h + 3); t.setAttribute("class", "pin-lbl");
+            t.textContent = d.code; markers.appendChild(t);
         });
     }
 
