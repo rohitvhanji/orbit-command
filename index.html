@@ -34,26 +34,23 @@
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-
-        /* Day Match Chart - Centered & Optimized */
         #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
         .chart-centered-content { max-width: 1200px; margin: 0 auto; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; }
         .legend-item { display: flex; align-items: center; gap: 5px; }
         .legend-box { width: 12px; height: 12px; border-radius: 2px; }
-        .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: flex; gap: 15px; align-items: center; }
-        .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; transition: 0.2s; }
-        .rec-btn:hover { background: var(--slack-green); color: white; border-color: var(--slack-green); }
+        .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
+        .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; }
+        .slack-copy-box { background: #f4f4f4; padding: 15px; border-radius: 6px; border: 1px dashed #ccc; font-family: monospace; font-size: 0.8rem; margin-top: 30px; position: relative; }
         .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
         .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
         .chart-grid { flex-grow: 1; display: flex; gap: 4px; }
         .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; }
-        .match-row .chart-box { cursor: pointer; transition: 0.1s; border: 1px solid rgba(0,0,0,0.03); }
+        .match-row .chart-box { cursor: pointer; border: 1px solid rgba(0,0,0,0.03); }
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
         .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
         .chart-tick { flex: 1; font-size: 0.6rem; text-align: center; color: #aaa; font-weight: 900; }
-
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
@@ -61,67 +58,37 @@
     </style>
 </head>
 <body>
-
-<div id="auth-overlay">
-    <div class="auth-card">
-        <input type="email" id="auth-email" class="mgmt-input" placeholder="Email" style="color:black">
-        <input type="password" id="auth-pass" class="mgmt-input" placeholder="Password" style="color:black">
-        <button onclick="handleAuth()" style="padding:15px; background:var(--slack-purple); color:white; border:none; border-radius:8px; cursor:pointer;">LOGIN</button>
-        <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
-    </div>
-</div>
-
+<div id="auth-overlay"><div class="auth-card"><input type="email" id="auth-email" class="mgmt-input" placeholder="Email" style="color:black"><input type="password" id="auth-pass" class="mgmt-input" placeholder="Password" style="color:black"><button onclick="handleAuth()" style="padding:15px; background:var(--slack-purple); color:white; border:none; border-radius:8px; cursor:pointer;">LOGIN</button><div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div></div></div>
 <div id="app-shell">
     <aside id="sidebar">
         <div class="sidebar-header"><h2>LOOM</h2><span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6;">Logout</span></div>
-        <div class="mgmt-section">
-            <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
-            <button onclick="lookupCity()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:white; color:var(--slack-purple)">ADD OFFICE</button>
-        </div>
-        <div class="mgmt-section">
-            <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
-            <select id="newLoc" class="mgmt-input"></select>
-            <button onclick="addMember()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:var(--slack-green); color:white;">ADD TEAMMATE</button>
-        </div>
+        <div class="mgmt-section"><input type="text" id="cityInput" class="mgmt-input" placeholder="City name..."><button onclick="lookupCity()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:white; color:var(--slack-purple)">ADD OFFICE</button></div>
+        <div class="mgmt-section"><input type="text" id="newName" class="mgmt-input" placeholder="Name..."><select id="newLoc" class="mgmt-input"></select><button onclick="addMember()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:var(--slack-green); color:white;">ADD TEAMMATE</button></div>
         <div id="member-groups"></div>
     </aside>
-
     <main id="main-view-container">
-        <div id="map-area">
-            <div id="map-bg"></div>
-            <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
-                <g id="day-night-layer"></g>
-                <g id="grid-lines-layer"></g>
-                <g id="grid-label-layer"></g>
-                <g id="marker-layer"></g>
-            </svg>
-        </div>
-
+        <div id="map-area"><div id="map-bg"></div><svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none"><g id="day-night-layer"></g><g id="grid-lines-layer"></g><g id="grid-label-layer"></g><g id="marker-layer"></g></svg></div>
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div>
-                        <h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2>
-                        <span style="font-size:0.75rem; color:#666;">Optimizing for checked timezones</span>
-                    </div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Synchronized Matrix View</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--status-snooze)"></div> Snooze</div>
-                        <div class="legend-item"><div class="legend-box" style="background:var(--status-weekend)"></div> Weekend</div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--status-weekend)"></div> Rest</div>
                     </div>
                     <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
                 </div>
-
-                <div class="recommendation-panel" id="rec-panel">
-                    <span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">BEST SLOTS:</span>
-                    <div id="rec-slots" style="display:flex; gap:10px;"></div>
-                </div>
-
+                <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP 3 SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
                 <div id="chart-body"></div>
+                <div class="slack-copy-box">
+                    <strong>SLACK RECOMMENDATION:</strong><br>
+                    <div id="slack-msg" style="margin-top:10px; color:#333;">Select a date to generate message...</div>
+                    <button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button>
+                </div>
             </div>
         </div>
-
         <footer id="scheduler">
             <input type="date" id="schedDate" style="padding:8px">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
@@ -228,8 +195,8 @@
         body.innerHTML = ''; recSlots.innerHTML = '';
 
         const uTzs = [...new Set(Object.values(locationData).map(l => l.tz))];
-        const steps = document.getElementById('minVal').value === "30" ? 48 : 24;
-        const msPer = (24/steps) * 60 * 60000;
+        const count = document.getElementById('minVal').value === "30" ? 48 : 24;
+        const stepMs = (24/count) * 60 * 60000;
 
         let timeline = `<div class="chart-timeline">`;
         for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
@@ -240,8 +207,8 @@
             let row = `<div class="chart-row">
                 <div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div>
                 <div class="chart-grid">`;
-            for(let i=0; i<steps; i++){
-                const local = new Date(bD.getTime() + (i * msPer) + (bD.getTimezoneOffset()*60000) + (m.offset * 3600000));
+            for(let i=0; i<count; i++){
+                const local = new Date(bD.getTime() + (i * stepMs) + (bD.getTimezoneOffset()*60000) + (m.offset * 3600000));
                 row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
             }
             body.innerHTML += row + `</div></div>`;
@@ -251,8 +218,8 @@
         
         const results = [];
         const g = document.getElementById('m-grid');
-        for(let i=0; i<steps; i++){
-            const tD = new Date(bD.getTime() + (i * msPer));
+        for(let i=0; i<count; i++){
+            const tD = new Date(bD.getTime() + (i * stepMs));
             const sc = calcH(tD);
             results.push({ time: tD, score: sc });
             const box = document.createElement('div');
@@ -262,8 +229,8 @@
             g.appendChild(box);
         }
 
-        // Add Recommendations
-        results.sort((a,b) => b.score - a.score).slice(0, 3).forEach(r => {
+        const sorted = results.sort((a,b) => b.score - a.score).slice(0, 3);
+        sorted.forEach(r => {
             const btn = document.createElement('button');
             btn.className = 'rec-btn';
             btn.innerText = `${r.time.getHours().toString().padStart(2,'0')}:${r.time.getMinutes().toString().padStart(2,'0')} (${r.score}%)`;
@@ -271,21 +238,13 @@
             recSlots.appendChild(btn);
         });
 
+        const dateStr = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. Currently looking at ${sorted[0].score}% Team Harmony!`;
         toggleView('rec');
     }
 
-    function syncAndRender(t) {
-        workDate = new Date(t.getTime()); isFitMode = true;
-        document.getElementById('hourVal').value = workDate.getHours();
-        document.getElementById('minVal').value = workDate.getMinutes() === 30 ? "30" : "00";
-        render();
-    }
-
-    function toggleEx(l) {
-        if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l);
-        buildMatchChart(); 
-    }
-
+    function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
+    function syncAndRender(t) { workDate = new Date(t.getTime()); isFitMode = true; document.getElementById('hourVal').value = workDate.getHours(); document.getElementById('minVal').value = workDate.getMinutes() === 30 ? "30" : "00"; render(); }
     function calcH(t) {
         const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
         if(!filtered.length) return 0;
@@ -311,7 +270,6 @@
         Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
             const g = groups[tzK];
             const localTime = new Date(gZ + (g.offset * 3600000));
-            const status = getStatus(localTime);
             let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${localTime.getHours().toString().padStart(2,'0')}:${localTime.getMinutes().toString().padStart(2,'0')}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
@@ -327,12 +285,8 @@
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-        
         let t = 0, av = 0;
-        team.forEach(m => { 
-            const lM = locationData[m.loc];
-            if (lM) { t++; if(getStatus(new Date(gZ + (lM.offset * 3600000))).work) av++; }
-        });
+        team.forEach(m => { const lM = locationData[m.loc]; if (lM) { t++; if(getStatus(new Date(gZ + (lM.offset * 3600000))).work) av++; } });
         document.getElementById('predictVal').innerText = t > 0 ? Math.round((av/t)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
@@ -352,13 +306,13 @@
         const night = document.getElementById('day-night-layer');
         const labels = document.getElementById('grid-label-layer');
         const markers = document.getElementById('marker-layer');
-        night.innerHTML = ''; labels.innerHTML = ''; markers.innerHTML = '';
+        night.innerHTML = labels.innerHTML = markers.innerHTML = '';
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         for(let i=0; i<24; i++) {
             const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
             if (hrInt < 6 || hrInt >= 18) {
                 const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                r.setAttribute("x", x); r.setAttribute("y", 0); r.setAttribute("width", 33.4); r.setAttribute("height", 400);
+                r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400);
                 r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r);
             }
             if (hrInt === 9) addNeedleLabel(x, "WORK START", "var(--slack-green)", labels);
@@ -394,6 +348,7 @@
         isFitMode = v; render(); 
     }
     function resetToLive() { isFitMode = false; toggleView('map'); render(); }
+    function copySlackMsg() { navigator.clipboard.writeText(document.getElementById('slack-msg').innerText); alert("Copied to clipboard!"); }
     checkSession();
 </script>
 </body>
