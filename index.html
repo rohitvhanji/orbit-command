@@ -34,12 +34,10 @@
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
+        
+        #rec-view, #vote-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
         .chart-centered-content { max-width: 1200px; margin: 0 auto; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; }
-        .legend-item { display: flex; align-items: center; gap: 5px; }
-        .legend-box { width: 12px; height: 12px; border-radius: 2px; }
         .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
         .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; }
         .slack-copy-box { background: #f4f4f4; padding: 15px; border-radius: 6px; border: 1px dashed #ccc; font-family: monospace; font-size: 0.8rem; margin-top: 30px; position: relative; white-space: pre-line; }
@@ -49,6 +47,17 @@
         .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; }
         .match-row .chart-box { cursor: pointer; border: 1px solid rgba(0,0,0,0.03); }
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
+        
+        /* Voting Styles */
+        .vote-table { width: 100%; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .vote-table th { background: var(--slack-purple); color: white; padding: 15px; text-align: left; font-size: 0.8rem; text-transform: uppercase; }
+        .vote-table td { padding: 15px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .vote-cell { text-align: center; cursor: pointer; user-select: none; font-size: 1.2rem; transition: 0.2s; width: 20%; }
+        .vote-cell:hover { background: #f8f8f8; }
+        .vote-yes { background: #e6fffa; color: var(--slack-green); }
+        .vote-no { background: #fff5f5; color: var(--status-snooze); }
+        .vote-maybe { background: #fffaf0; color: var(--status-lunch); }
+
         .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
         .chart-tick { flex: 1; font-size: 0.5rem; text-align: center; color: #aaa; font-weight: 900; }
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
@@ -68,16 +77,12 @@
     </aside>
     <main id="main-view-container">
         <div id="map-area"><div id="map-bg"></div><svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none"><g id="day-night-layer"></g><g id="grid-lines-layer"></g><g id="grid-label-layer"></g><g id="marker-layer"></g></svg></div>
+        
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Timezone Grid</span></div>
-                    <div class="chart-legend">
-                        <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
-                        <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
-                        <div class="legend-item"><div class="legend-box" style="background:var(--status-snooze)"></div> Snooze</div>
-                        <div class="legend-item"><div class="legend-box" style="background:var(--status-weekend)"></div> Rest</div>
-                    </div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST Reference</span></div>
+                    <button onclick="toggleView('vote')" style="padding:10px 20px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">OPEN VOTING BOOTH →</button>
                     <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
                 </div>
                 <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP RECO SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
@@ -85,6 +90,17 @@
                 <div class="slack-copy-box"><strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button></div>
             </div>
         </div>
+
+        <div id="vote-view">
+            <div class="chart-centered-content">
+                <div class="chart-header-row">
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Teammate Voting Booth</h2><span style="font-size:0.75rem; color:#666;">Confirm availability for active participants</span></div>
+                    <button onclick="toggleView('rec')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MATCH</button>
+                </div>
+                <div id="vote-container"></div>
+            </div>
+        </div>
+
         <footer id="scheduler">
             <input type="date" id="schedDate" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
@@ -107,6 +123,7 @@
     let isFitMode = false; let isMatchViewActive = false;
     let workDateUTC_MS = Date.now();
     let chartExclusions = new Set();
+    let currentSlots = []; // Store suggested slots for voting
     const MY_OFFSET = 5.5; 
 
     async function handleAuth() {
@@ -175,15 +192,15 @@
     }
 
     function toggleView(v) {
-        isMatchViewActive = (v === 'rec');
         document.getElementById('map-area').style.display = v === 'map' ? 'block' : 'none';
         document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
+        document.getElementById('vote-view').style.display = v === 'vote' ? 'block' : 'none';
+        if (v === 'vote') buildVoteGrid();
     }
 
     function evaluateMatch(utcMS) {
         const activeTzs = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
         if(!activeTzs.length) return { color: "var(--status-weekend)", isRed: true };
-
         let redFound = false, greenCount = 0, blueCount = 0, totalCount = activeTzs.length;
         for (const tzName of activeTzs) {
             const loc = Object.values(locationData).find(l => l.tz === tzName);
@@ -220,7 +237,6 @@
         allTzNames.forEach(tzName => {
             const loc = Object.values(locationData).find(l => l.tz === tzName);
             const isExcluded = chartExclusions.has(tzName);
-            // Hide row content if deselected
             let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${tzName}')"> <span>${tzName}</span></div><div class="chart-grid" style="visibility: ${isExcluded ? 'hidden' : 'visible'}">`;
             for(let i=0; i<count; i++){
                 const slotUTC = istMidnightInUTC + (i * stepMs);
@@ -246,14 +262,14 @@
             g.appendChild(box);
         }
 
-        const sortedRecs = results.filter(r => !r.isRed).sort((a,b) => {
+        currentSlots = results.filter(r => !r.isRed).sort((a,b) => {
             if (a.isGreen && !b.isGreen) return -1;
             if (!a.isGreen && b.isGreen) return 1;
             if (b.greenCount !== a.greenCount) return b.greenCount - a.greenCount;
             return b.blueCount - a.blueCount;
         }).slice(0, 3);
 
-        sortedRecs.forEach(r => {
+        currentSlots.forEach(r => {
             const btn = document.createElement('button'); btn.className = 'rec-btn';
             btn.innerText = `${r.h.toString().padStart(2,'0')}:${r.m.toString().padStart(2,'0')}`;
             btn.onclick = () => syncAndRender(r.utc, r.h, r.m);
@@ -263,10 +279,10 @@
         const dDate = new Date(dS + "T12:00:00Z");
         const dStr = dDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         
-        if(sortedRecs.length > 0) {
+        if(currentSlots.length > 0) {
             let msg = `Hey Team! 🌍 For our meeting on *${dStr}*, here are the best slots:\n\n`;
             const activeTzList = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
-            sortedRecs.forEach((s, idx) => {
+            currentSlots.forEach((s, idx) => {
                 const icon = s.isGreen ? "🟢" : "🟡";
                 msg += `*Slot ${idx+1}:*\n${icon} `;
                 const localTimes = [];
@@ -281,6 +297,59 @@
         } else {
             document.getElementById('slack-msg').innerText = "No acceptable slots found.";
         }
+    }
+
+    // VOTING LOGIC
+    function buildVoteGrid() {
+        const container = document.getElementById('vote-container');
+        container.innerHTML = '';
+        if (!currentSlots.length) { container.innerHTML = "<p>No slots recommended yet. Please run 'Best Match' first.</p>"; return; }
+
+        const activeTzList = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
+        const activeTeammates = team.filter(m => locationData[m.loc] && activeTzList.includes(locationData[m.loc].tz));
+
+        let table = `<table class="vote-table"><thead><tr><th>Teammate</th>`;
+        currentSlots.forEach((s, i) => table += `<th>Slot ${i+1}<br><span style="font-size:0.6rem; font-weight:normal;">${s.h.toString().padStart(2,'0')}:${s.m.toString().padStart(2,'0')} IST</span></th>`);
+        table += `</tr></thead><tbody id="vote-body">`;
+
+        activeTeammates.forEach(m => {
+            table += `<tr><td><strong>${m.name}</strong><br><span style="font-size:0.7rem; opacity:0.6;">${m.loc}</span></td>`;
+            currentSlots.forEach((_, i) => {
+                table += `<td class="vote-cell" data-state="none" onclick="toggleVoteCell(this, ${i})">-</td>`;
+            });
+            table += `</tr>`;
+        });
+
+        table += `<tr style="background:#f4f4f4; font-weight:900;"><td>CONSENSUS</td>`;
+        currentSlots.forEach((_, i) => table += `<td id="summary-slot-${i}" style="text-align:center;">0%</td>`);
+        table += `</tr></tbody></table>`;
+        container.innerHTML = table;
+    }
+
+    function toggleVoteCell(cell, slotIdx) {
+        const states = { "none": "✅", "✅": "❓", "❓": "❌", "❌": "✅" };
+        const classes = { "✅": "vote-yes", "❓": "vote-maybe", "❌": "vote-no", "none": "" };
+        
+        const currentState = cell.innerText;
+        const newState = states[currentState] || "✅";
+        
+        cell.innerText = newState;
+        cell.className = "vote-cell " + classes[newState];
+        updateConsensus();
+    }
+
+    function updateConsensus() {
+        const rows = document.querySelectorAll('#vote-body tr:not(:last-child)');
+        currentSlots.forEach((_, colIdx) => {
+            let yesCount = 0;
+            rows.forEach(row => {
+                if (row.children[colIdx + 1].innerText === "✅") yesCount++;
+            });
+            const pct = rows.length ? Math.round((yesCount / rows.length) * 100) : 0;
+            const el = document.getElementById(`summary-slot-${colIdx}`);
+            el.innerText = `${pct}% YES`;
+            el.style.color = pct > 70 ? 'var(--slack-green)' : (pct > 40 ? 'var(--status-lunch)' : 'var(--status-snooze)');
+        });
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
@@ -335,11 +404,9 @@
             else if (hrInt === 17) addNeedleLabel(x, "WORK END", "var(--slack-green)", labels);
             else if (hrInt === 22) addNeedleLabel(x, "SNOOZE", "var(--status-snooze)", labels);
         }
-        const sunX = (((12 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
-        const moonX = (((24 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
+        const sunX = sunX_calc = (((12 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
         const sun = document.createElementNS("http://www.w3.org/2000/svg", "text"); sun.setAttribute("x", sunX - 10); sun.setAttribute("y", 350); sun.setAttribute("font-size", "25"); sun.textContent = "☀️";
-        const moon = document.createElementNS("http://www.w3.org/2000/svg", "text"); moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 350); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
-        markers.appendChild(sun); markers.appendChild(moon);
+        markers.appendChild(sun);
         Object.values(locationData).forEach(d => {
             const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); dot.setAttribute("stroke-width", "1"); markers.appendChild(dot);
