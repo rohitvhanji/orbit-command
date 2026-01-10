@@ -71,7 +71,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST Reference</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Timezone Perspective</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -125,7 +125,7 @@
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
-        if(locs) locs.forEach(l => { locationData[l.name] = { name: l.name, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
+        if(locs) locs.forEach(l => { locationData[l.name] = { code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
         team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
         populateLocDropdown(); render();
     }
@@ -184,11 +184,7 @@
         const activeTzs = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
         if(!activeTzs.length) return { color: "var(--status-weekend)", isRed: true };
 
-        let redFound = false;
-        let greenCount = 0;
-        let blueCount = 0;
-        let totalCount = activeTzs.length;
-
+        let redFound = false, greenCount = 0, blueCount = 0, totalCount = activeTzs.length;
         for (const tzName of activeTzs) {
             const loc = Object.values(locationData).find(l => l.tz === tzName);
             const s = getStatus(utcMS + (loc.offset * 3600000));
@@ -196,7 +192,6 @@
             if (s.isWork) greenCount++;
             if (s.isBlue) blueCount++;
         }
-
         if (redFound) return { color: "var(--status-snooze)", isRed: true, greenCount, blueCount };
         if (greenCount === totalCount) return { color: "var(--slack-green)", isRed: false, isGreen: true, greenCount, blueCount };
         return { color: "var(--status-lunch)", isRed: false, isGreen: false, greenCount, blueCount };
@@ -210,8 +205,7 @@
         const recSlots = document.getElementById('rec-slots');
         body.innerHTML = ''; recSlots.innerHTML = '';
 
-        const activeLocList = Object.values(locationData).filter(l => !chartExclusions.has(l.tz));
-        const activeTzList = [...new Set(activeLocList.map(l => l.tz))];
+        const allTzNames = [...new Set(Object.values(locationData).map(l => l.tz))];
         const dur = document.getElementById('durVal').value;
         let count = 24, stepMs = 60 * 60000;
         if(dur === "30") { count = 48; stepMs = 30 * 60000; }
@@ -223,12 +217,14 @@
 
         const istMidnightInUTC = new Date(dS + "T00:00:00Z").getTime() - (MY_OFFSET * 3600000);
 
-        Object.values(locationData).forEach(m => {
-            const isExcluded = chartExclusions.has(m.tz);
-            let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${m.tz}')"> <span>${m.code}</span></div><div class="chart-grid">`;
+        // Render one row per UNIQUE TIMEZONE
+        allTzNames.forEach(tzName => {
+            const loc = Object.values(locationData).find(l => l.tz === tzName);
+            const isExcluded = chartExclusions.has(tzName);
+            let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${tzName}')"> <span>${tzName}</span></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){
                 const slotUTC = istMidnightInUTC + (i * stepMs);
-                row += `<div class="chart-box" style="background:${getStatus(slotUTC + (m.offset * 3600000)).color}"></div>`;
+                row += `<div class="chart-box" style="background:${getStatus(slotUTC + (loc.offset * 3600000)).color}"></div>`;
             }
             body.innerHTML += row + `</div></div>`;
         });
@@ -250,6 +246,7 @@
             g.appendChild(box);
         }
 
+        // TIERED RECO logic: Green > Max Green > Max Blue
         const sortedRecs = results.filter(r => !r.isRed).sort((a,b) => {
             if (a.isGreen && !b.isGreen) return -1;
             if (!a.isGreen && b.isGreen) return 1;
@@ -267,14 +264,12 @@
         const dDate = new Date(dS + "T12:00:00Z");
         const dStr = dDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         
-        // Multi-timezone message generator
         if(sortedRecs.length > 0) {
             let msg = `Hey Team! 🌍 For our meeting on *${dStr}*, here are the best slots:\n\n`;
+            const activeTzList = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
             sortedRecs.forEach((s, idx) => {
                 const icon = s.isGreen ? "🟢" : "🟡";
                 msg += `*Slot ${idx+1}:*\n${icon} `;
-                
-                // Build string of local times for every office
                 const localTimes = [];
                 activeTzList.forEach(tzK => {
                     const loc = Object.values(locationData).find(l => l.tz === tzK);
@@ -290,7 +285,7 @@
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
-    function syncAndRender(utcMS, h, m) { workDateUTC_MS = utcMS; isFitMode = true; document.getElementById('hourVal').value = h; document.getElementById('minVal').value = m === "30" ? "30" : "00"; render(); }
+    function syncAndRender(utcMS, h, m) { workDateUTC_MS = utcMS; isFitMode = true; document.getElementById('hourVal').value = h; document.getElementById('minVal').value = m == 30 ? "30" : "00"; render(); }
 
     function render() {
         const refMS = isFitMode ? workDateUTC_MS : (Date.now() + (new Date().getTimezoneOffset()*60000));
