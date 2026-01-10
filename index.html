@@ -10,10 +10,7 @@
             --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
             --slack-green: #2EB67D; --slack-bg: #F0F2F5; --slack-border: #E2E2E2;
             --text-dark: #1D1C1D; --status-lunch: #ECB22E; --status-snooze: #E01E5A;
-            /* Updated night wash to match requested image deep bluish-black */
-            --night-wash: rgba(10, 15, 30, 0.85); 
-            --status-weekend: #888888;
-            --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
+            --night-wash: rgba(10, 15, 30, 0.7); --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
         
@@ -45,9 +42,7 @@
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* Darker, more visible grid lines */
-        .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
-        .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
+        .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 2.5px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
         #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
     </style>
@@ -75,7 +70,7 @@
             <select id="newLoc" class="mgmt-input"></select>
             <button onclick="addMember()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:var(--slack-green); color:white;">ADD TEAMMATE</button>
         </div>
-        <div id Member-groups></div>
+        <div id="member-groups"></div>
     </aside>
 
     <main id="main-view-container">
@@ -90,11 +85,7 @@
         </div>
         <footer id="scheduler">
             <input type="date" id="schedDate" style="padding:8px">
-            <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
-            <select id="minVal" style="padding:8px">
-                <option value="00">00</option>
-                <option value="30">30</option>
-            </select>
+            <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH">
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
             <div id="predictVal" style="font-weight:900; margin-left:15px">0% Harmony</div>
@@ -165,19 +156,18 @@
 
     async function removeLocation(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
     async function removeMember(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
+    async function deleteFullTzGroup(tzName) {
+        if(!confirm(`Remove all offices in ${tzName}?`)) return;
+        const cities = Object.values(locationData).filter(l => l.tz === tzName).map(l => l.name);
+        await _supabase.from('locations').delete().in('name', cities); loadData();
+    }
 
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc'); sel.innerHTML = '';
         Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
     }
 
-    // Logic for weekend rest status and weekday work status
-    function getStatus(localTime) {
-        const hr = localTime.getHours();
-        const day = localTime.getDay();
-        const isWeekend = (day === 0 || day === 6); // 0 = Sunday, 6 = Saturday
-
-        if (isWeekend) return { emoji: "🏖️", color: "var(--status-weekend)", work: false };
+    function getStatus(hr) {
         if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
         if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true };
         if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
@@ -201,7 +191,7 @@
         Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tz => {
             const g = groups[tz];
             const localTime = new Date(utcGroundZero + (g.offset * 3600000));
-            const status = getStatus(localTime);
+            const status = getStatus(localTime.getHours());
             
             const dateStr = localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             const timeStr = localTime.getHours().toString().padStart(2,'0') + ":" + localTime.getMinutes().toString().padStart(2,'0');
@@ -211,6 +201,7 @@
                     <span>${tz}</span>
                     <div style="display:flex; align-items:center;">
                         <span>${dateStr} ${timeStr}</span>
+                        <span class="btn-hover-del" onclick="deleteFullTzGroup('${tz}')">×</span>
                     </div>
                 </div>`;
             
@@ -222,8 +213,7 @@
                         <span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span>
                     </div>`;
                 mates.forEach(m => { 
-                    const mateLocalTime = new Date(utcGroundZero + (locationData[loc].offset * 3600000));
-                    const s = getStatus(mateLocalTime);
+                    const s = getStatus(localTime.getHours());
                     if(s.work) available++;
                     tzHtml += `<div class="member-row">
                         <div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div>
@@ -237,7 +227,7 @@
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0% Harmony";
+        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
 
@@ -246,8 +236,8 @@
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
         line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
-        line.setAttribute("class", "grid-line");
-        txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
+        line.setAttribute("stroke", color); line.setAttribute("stroke-dasharray", "4");
+        txt.setAttribute("x", x + 5); txt.setAttribute("y", 15); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
         txt.textContent = text;
         g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
     }
@@ -256,7 +246,7 @@
         const night = document.getElementById('day-night-layer');
         const labels = document.getElementById('grid-label-layer');
         const markers = document.getElementById('marker-layer');
-        night.innerHTML = ''; labels.innerHTML = ''; markers.innerHTML = '';
+        night.innerHTML = labels.innerHTML = markers.innerHTML = '';
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         
         for(let i=0; i<24; i++) {
@@ -293,11 +283,9 @@
 
     function setFitMode(v) { 
         const h = parseInt(document.getElementById('hourVal').value) || 0;
-        const m = parseInt(document.getElementById('minVal').value) || 0;
         const d = document.getElementById('schedDate').value;
         if(!d) return alert("Select a date.");
-        // Correct Date parsing to include the 30 min interval
-        workDate = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`);
+        workDate = new Date(`${d}T${h.toString().padStart(2,'0')}:00:00`);
         isFitMode = v; render(); 
     }
     function resetToLive() { isFitMode = false; render(); }
