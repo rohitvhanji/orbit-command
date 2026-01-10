@@ -1,164 +1,359 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loom | Precision Scheduling</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<style>
-:root{
-    --slack-purple:#4A154B;
-    --slack-navy:#3F0E40;
-    --slack-blue:#1264A3;
-    --slack-green:#2EB67D;
-    --status-lunch:#ECB22E;
-    --status-snooze:#E01E5A;
-    --status-weekend:#888;
-    --night-wash:rgba(8,14,32,.85);
-}
-html,body{margin:0;height:100%;font-family:-apple-system}
-#app-shell{display:flex;height:100%}
-#sidebar{width:320px;background:var(--slack-purple);color:#fff;overflow:auto}
-#member-groups{padding-bottom:80px}
-.member-row{display:flex;justify-content:space-between;padding:6px 15px}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px}
-#map-area{flex:1;position:relative;background:#000}
-#map-bg{position:absolute;inset:0;background:url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg') no-repeat;background-size:100% 100%;filter:saturate(.5)}
-#svg-map{position:absolute;inset:0}
-#scheduler{position:absolute;bottom:0;left:0;right:0;background:#fff;padding:10px;display:flex;gap:10px;justify-content:center}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Loom | Precision Scheduling</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
+            --slack-green: #2EB67D; --slack-bg: #F0F2F5; --slack-border: #E2E2E2;
+            --text-dark: #1D1C1D; --status-lunch: #ECB22E; --status-snooze: #E01E5A;
+            --night-wash: rgba(10, 15, 30, 0.85); --status-weekend: #888888;
+            --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
+        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
+        #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
+        #app-shell { display: flex; height: 100%; width: 100%; }
+        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; }
+        .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .mgmt-input { width: 100%; padding: 10px; border-radius: 4px; border: none; margin-bottom: 6px; box-sizing: border-box; background: rgba(255,255,255,0.1); color: white; }
+        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
+        .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
+        .tz-header { padding: 10px 15px; font-size: 0.7rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; }
+        .btn-hover-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; padding-left: 10px; }
+        .tz-header:hover .btn-hover-del, .loc-header:hover .btn-hover-del, .member-row:hover .btn-hover-del { opacity: 1; }
+        .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .loc-header { padding: 10px 15px 4px 15px; font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+        .member-row { padding: 6px 15px 6px 30px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; height: 100%; }
+        #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
+        #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
+        #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #rec-view { display: none; flex-grow: 1; background: white; padding: 40px; overflow-y: auto; }
+        .chart-centered-content { max-width: 1200px; margin: 0 auto; }
+        .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box { width: 12px; height: 12px; border-radius: 2px; }
+        .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
+        .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; }
+        .slack-copy-box { background: #f4f4f4; padding: 15px; border-radius: 6px; border: 1px dashed #ccc; font-family: monospace; font-size: 0.8rem; margin-top: 30px; position: relative; }
+        .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
+        .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
+        .chart-grid { flex-grow: 1; display: flex; gap: 2px; }
+        .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; }
+        .match-row .chart-box { cursor: pointer; border: 1px solid rgba(0,0,0,0.03); }
+        .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
+        .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .chart-tick { flex: 1; font-size: 0.5rem; text-align: center; color: #aaa; font-weight: 900; }
+        .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
+        .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
+        .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
+        #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
+    </style>
 </head>
-
 <body>
-
+<div id="auth-overlay"><div class="auth-card"><input type="email" id="auth-email" class="mgmt-input" placeholder="Email" style="color:black"><input type="password" id="auth-pass" class="mgmt-input" placeholder="Password" style="color:black"><button onclick="handleAuth()" style="padding:15px; background:var(--slack-purple); color:white; border:none; border-radius:8px; cursor:pointer;">LOGIN</button><div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div></div></div>
 <div id="app-shell">
-<aside id="sidebar">
-    <h2 style="padding:15px">LOOM</h2>
-    <div id="member-groups"></div>
-</aside>
-
-<main style="flex:1;position:relative">
-    <div id="map-area">
-        <div id="map-bg"></div>
-        <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
-            <g id="day-night-layer"></g>
-            <g id="marker-layer"></g>
-        </svg>
-    </div>
-
-    <footer id="scheduler">
-        <input type="date" id="schedDate">
-        <input type="number" id="hourVal" min="0" max="23" placeholder="HH">
-        <select id="minVal"><option value="0">00</option><option value="30">30</option></select>
-        <button onclick="setFitMode()">SIMULATE</button>
-        <button onclick="resetToLive()">LIVE</button>
-    </footer>
-</main>
+    <aside id="sidebar">
+        <div class="sidebar-header"><h2>LOOM</h2><span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6;">Logout</span></div>
+        <div class="mgmt-section"><input type="text" id="cityInput" class="mgmt-input" placeholder="City name..."><button onclick="lookupCity()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:white; color:var(--slack-purple)">ADD OFFICE</button></div>
+        <div class="mgmt-section"><input type="text" id="newName" class="mgmt-input" placeholder="Name..."><select id="newLoc" class="mgmt-input"></select><button onclick="addMember()" style="width:100%; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; background:var(--slack-green); color:white;">ADD TEAMMATE</button></div>
+        <div id="member-groups"></div>
+    </aside>
+    <main id="main-view-container">
+        <div id="map-area"><div id="map-bg"></div><svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none"><g id="day-night-layer"></g><g id="grid-lines-layer"></g><g id="grid-label-layer"></g><g id="marker-layer"></g></svg></div>
+        <div id="rec-view">
+            <div class="chart-centered-content">
+                <div class="chart-header-row">
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST Reference</span></div>
+                    <div class="chart-legend">
+                        <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--status-snooze)"></div> Snooze</div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--status-weekend)"></div> Rest</div>
+                    </div>
+                    <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
+                </div>
+                <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP 3 IST SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
+                <div id="chart-body"></div>
+                <div class="slack-copy-box"><strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button></div>
+            </div>
+        </div>
+        <footer id="scheduler">
+            <input type="date" id="schedDate" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();">
+            <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
+            <select id="minVal" style="padding:8px"><option value="00">00</option><option value="30">30</option></select>
+            <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
+            <select id="durVal" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
+            <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
+            <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
+            <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
+        </footer>
+    </main>
 </div>
 
 <script>
-/* ================== CONFIG ================== */
+    const SUPABASE_URL = 'https://xcdnyheqtagizlcyzuzb.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh'; 
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const MY_OFFSET = 5.5; // IST
-let isFitMode=false;
-let workDate=new Date(); // ALWAYS UTC
+    let locationData = {}; let team = [];
+    let isFitMode = false; let isMatchViewActive = false; let workDate = new Date();
+    let chartExclusions = new Set();
+    const MY_OFFSET = 5.5; // Locked IST Reference Offset
 
-/* Mock data so file runs standalone */
-const locationData={
-    Bangalore:{offset:5.5,tz:"IST",lon:77.6,lat:12.9},
-    London:{offset:0,tz:"GMT",lon:-0.1,lat:51.5},
-    NewYork:{offset:-5,tz:"EST",lon:-74,lat:40.7}
-};
-const team=[
-    {name:"A",loc:"Bangalore"},
-    {name:"B",loc:"London"},
-    {name:"C",loc:"NewYork"}
-];
+    async function handleAuth() {
+        const e = document.getElementById('auth-email').value;
+        const p = document.getElementById('auth-pass').value;
+        const { error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
+        if (error) document.getElementById('auth-status').innerText = error.message; else checkSession();
+    }
+    async function checkSession() {
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (session) { document.getElementById('auth-overlay').style.display = 'none'; loadData(); }
+    }
+    async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
-/* ================== STATUS ================== */
+    async function loadData() {
+        const { data: locs } = await _supabase.from('locations').select('*');
+        const { data: members } = await _supabase.from('teammates').select('*');
+        locationData = {};
+        if(locs) locs.forEach(l => { locationData[l.name] = { id: l.id, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
+        team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
+        populateLocDropdown(); render();
+    }
 
-function getStatus(d){
-    const h=d.getHours(),day=d.getDay();
-    if(day===0||day===6) return {emoji:"🏖️",color:"var(--status-weekend)"};
-    if(h>=22||h<7) return {emoji:"😴",color:"var(--status-snooze)"};
-    if(h>=9&&h<17) return {emoji:"💻",color:"var(--slack-green)"};
-    return {emoji:"🏠",color:"var(--slack-blue)"};
-}
-
-/* ================== RENDER ================== */
-
-function render(){
-    const ref=isFitMode?workDate:new Date();
-    const utcMs=ref.getTime();
-
-    const c=document.getElementById("member-groups");
-    c.innerHTML="";
-
-    Object.entries(locationData).forEach(([city,l])=>{
-        const local=new Date(utcMs+(l.offset*3600000));
-        const s=getStatus(local);
-        team.filter(t=>t.loc===city).forEach(m=>{
-            c.innerHTML+=`
-            <div class="member-row">
-                <div><span class="status-dot" style="background:${s.color}"></span>${m.name} (${city})</div>
-                <div>${local.getHours().toString().padStart(2,"0")}:${local.getMinutes().toString().padStart(2,"0")} ${s.emoji}</div>
-            </div>`;
-        });
-    });
-
-    drawMap(ref);
-}
-
-/* ================== MAP ================== */
-
-function drawMap(ref){
-    const night=document.getElementById("day-night-layer");
-    night.innerHTML="";
-    const utcHour=ref.getUTCHours()+ref.getUTCMinutes()/60;
-
-    for(let i=0;i<24;i++){
-        const lon=i*15-180;
-        const hr=Math.floor((24+utcHour+(lon/15))%24);
-        if(hr<6||hr>=18){
-            const r=document.createElementNS("http://www.w3.org/2000/svg","rect");
-            r.setAttribute("x",(lon+180)*2.222);
-            r.setAttribute("width",33.4);
-            r.setAttribute("height",400);
-            r.setAttribute("fill","var(--night-wash)");
-            night.appendChild(r);
+    async function lookupCity() {
+        const input = document.getElementById('cityInput').value.trim();
+        if (!input) return;
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
+        if (geo && geo[0]) {
+            const apiKey = 'VW4CCUCGOI2M';
+            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
+            if(tzR.status === 'OK') {
+                const { data: { user } } = await _supabase.auth.getUser();
+                await _supabase.from('locations').upsert({ name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(), lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id }, { onConflict: 'user_id,name' });
+                document.getElementById('cityInput').value = ''; loadData();
+            }
         }
     }
-}
 
-/* ================== CONTROLS ================== */
+    async function addMember() {
+        const n = document.getElementById('newName').value.trim();
+        const l = document.getElementById('newLoc').value;
+        if (n && l) {
+            const { data: { user } } = await _supabase.auth.getUser();
+            await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
+            document.getElementById('newName').value = ''; loadData();
+        }
+    }
 
-function setFitMode(){
-    const d=schedDate.value;
-    if(!d) return alert("Select date");
-    const h=parseInt(hourVal.value)||0;
-    const m=parseInt(minVal.value)||0;
+    async function removeLocation(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
+    async function removeMember(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
 
-    // IST wall-clock → UTC
-    const istUTC=Date.UTC(
-        +d.slice(0,4),
-        +d.slice(5,7)-1,
-        +d.slice(8,10),
-        h,m
-    );
-    workDate=new Date(istUTC-(MY_OFFSET*3600000));
-    isFitMode=true;
-    render();
-}
+    function populateLocDropdown() {
+        const sel = document.getElementById('newLoc'); sel.innerHTML = '';
+        Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
+    }
 
-function resetToLive(){
-    isFitMode=false;
-    render();
-}
+    function getStatus(localTime) {
+        const hr = localTime.getHours();
+        const day = localTime.getDay();
+        if (day === 0 || day === 6) return { emoji: "🏖️", color: "var(--status-weekend)", work: false, snooze: false };
+        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false, snooze: true };
+        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true, snooze: false };
+        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true, snooze: false };
+        return { emoji: "🏠", color: "var(--slack-blue)", work: false, snooze: false };
+    }
 
-/* ================== INIT ================== */
+    function toggleView(v) {
+        isMatchViewActive = (v === 'rec');
+        document.getElementById('map-area').style.display = v === 'map' ? 'block' : 'none';
+        document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
+    }
 
-render();
+    function buildMatchChart() {
+        toggleView('rec');
+        const dS = document.getElementById('schedDate').value;
+        const bD = dS ? new Date(dS + "T00:00:00") : new Date();
+        const body = document.getElementById('chart-body');
+        const recSlots = document.getElementById('rec-slots');
+        body.innerHTML = ''; recSlots.innerHTML = '';
+
+        const uTzs = [...new Set(Object.values(locationData).map(l => l.tz))];
+        const dur = document.getElementById('durVal').value;
+        let count = 24, stepMs = 60 * 60000;
+        if(dur === "30") { count = 48; stepMs = 30 * 60000; }
+        if(dur === "90") { count = 16; stepMs = 90 * 60000; }
+
+        let timeline = `<div class="chart-timeline">`;
+        for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
+        body.innerHTML += timeline + `</div>`;
+
+        uTzs.forEach(tzL => {
+            const m = Object.values(locationData).find(l => l.tz === tzL);
+            let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div><div class="chart-grid">`;
+            for(let i=0; i<count; i++){
+                // Calculate local time based on IST midnight baseline
+                const istSlotMs = bD.getTime() + (i * stepMs);
+                const utcForSlot = istSlotMs - (MY_OFFSET * 3600000);
+                const local = new Date(utcForSlot + (m.offset * 3600000));
+                row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
+            }
+            body.innerHTML += row + `</div></div>`;
+        });
+
+        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px;"><div class="chart-label" style="color:var(--slack-green); font-weight:900;">MATCH</div><div class="chart-grid" id="m-grid"></div></div>`;
+        
+        const results = [];
+        const g = document.getElementById('m-grid');
+        for(let i=0; i<count; i++){
+            const istSlotMs = bD.getTime() + (i * stepMs);
+            const data = calcMatchLogic(istSlotMs);
+            results.push({ timeMs: istSlotMs, score: data.score, color: data.color });
+            const box = document.createElement('div');
+            box.className = 'chart-box';
+            box.style.background = data.color;
+            box.onclick = () => syncAndRender(istSlotMs);
+            g.appendChild(box);
+        }
+
+        const sorted = results.sort((a,b) => b.score - a.score).slice(0, 3);
+        sorted.forEach(r => {
+            const timeObj = new Date(r.timeMs);
+            const btn = document.createElement('button'); btn.className = 'rec-btn';
+            btn.innerText = `${timeObj.getHours().toString().padStart(2,'0')}:${timeObj.getMinutes().toString().padStart(2,'0')} (${r.score}%)`;
+            btn.onclick = () => syncAndRender(r.timeMs);
+            recSlots.appendChild(btn);
+        });
+
+        const dL = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dL}, the best slots are: ${sorted.map(s => {
+            let d = new Date(s.timeMs);
+            return d.getHours() + ":" + d.getMinutes().toString().padStart(2,'0');
+        }).join(', ')}. This time works for roughly ${sorted[0].score}% of attendees!`;
+    }
+
+    function calcMatchLogic(istMs) {
+        const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
+        if(!filtered.length) return { score: 0, color: 'var(--status-weekend)' };
+        let hasRed = false, allGreen = true, workCount = 0;
+        const utcMs = istMs - (MY_OFFSET * 3600000);
+
+        filtered.forEach(m => {
+            const s = getStatus(new Date(utcMs + (locationData[m.loc].offset * 3600000)));
+            if(s.snooze) hasRed = true;
+            if(!s.work || s.emoji === "🍱") allGreen = false;
+            if(s.work) workCount++;
+        });
+
+        const score = Math.round((workCount / filtered.length) * 100);
+        if(hasRed) return { score, color: 'var(--status-snooze)' };
+        if(allGreen) return { score, color: 'var(--slack-green)' };
+        return { score, color: 'var(--status-lunch)' };
+    }
+
+    function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
+    
+    function syncAndRender(istMs) { 
+        const timeObj = new Date(istMs);
+        // FORCE the global workDate to exactly what's needed to render 00:00 locally for IST
+        // Subtract the IST offset from the IST-anchored click to find the UTC timestamp the Roster needs
+        const utcCorrected = istMs - (MY_OFFSET * 3600000);
+        
+        workDate = new Date(utcCorrected);
+        isFitMode = true; 
+        
+        document.getElementById('hourVal').value = timeObj.getHours(); 
+        document.getElementById('minVal').value = timeObj.getMinutes() === 30 ? "30" : "00"; 
+        render(); 
+    }
+
+    function render() {
+        const ref = isFitMode ? workDate : new Date();
+        const container = document.getElementById('member-groups'); container.innerHTML = '';
+        const groups = {};
+        Object.keys(locationData).forEach(name => { const label = locationData[name].tz || "UTC"; if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] }; groups[label].cities.push(name); });
+        
+        // Internal UTC baseline for all city offsets
+        const gZ = ref.getTime() + (ref.getTimezoneOffset() * 60000);
+
+        Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
+            const g = groups[tzK];
+            const localTime = new Date(gZ + (g.offset * 3600000));
+            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${localTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${localTime.getHours().toString().padStart(2,'0')}:${localTime.getMinutes().toString().padStart(2,'0')}</span></div>`;
+            g.cities.forEach(loc => {
+                const mates = team.filter(m => m.loc === loc);
+                tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
+                mates.forEach(m => { 
+                    const lM = locationData[loc]; 
+                    if (lM) { 
+                        const s = getStatus(new Date(gZ + (lM.offset * 3600000))); 
+                        tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
+                    } 
+                });
+                tzHtml += `</div>`;
+            });
+            container.innerHTML += tzHtml + `</div>`;
+        });
+        drawMap(ref);
+    }
+
+    function addNeedleLabel(x, text, color, parent) {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
+        line.setAttribute("class", "grid-line");
+        txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("class", "map-label-text");
+        txt.textContent = text; g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
+    }
+
+    function drawMap(refDate) {
+        const night = document.getElementById('day-night-layer');
+        const labels = document.getElementById('grid-label-layer');
+        const markers = document.getElementById('marker-layer');
+        night.innerHTML = labels.innerHTML = markers.innerHTML = '';
+        const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
+        for(let i=0; i<24; i++) {
+            const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
+            if (hrInt < 6 || hrInt >= 18) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r); }
+            if (hrInt === 9) addNeedleLabel(x, "WORK START", "var(--slack-green)", labels);
+            else if (hrInt === 13) addNeedleLabel(x, "LUNCH", "#ECB22E", labels);
+            else if (hrInt === 17) addNeedleLabel(x, "WORK END", "var(--slack-green)", labels);
+            else if (hrInt === 22) addNeedleLabel(x, "SNOOZE", "var(--status-snooze)", labels);
+        }
+        const sunX = (((12 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
+        const moonX = (((24 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
+        const sun = document.createElementNS("http://www.w3.org/2000/svg", "text"); sun.setAttribute("x", sunX - 10); sun.setAttribute("y", 350); sun.setAttribute("font-size", "25"); sun.textContent = "☀️";
+        const moon = document.createElementNS("http://www.w3.org/2000/svg", "text"); moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 350); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
+        markers.appendChild(sun); markers.appendChild(moon);
+        Object.values(locationData).forEach(d => {
+            const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); dot.setAttribute("stroke-width", "1"); markers.appendChild(dot);
+            const t = document.createElementNS("http://www.w3.org/2000/svg", "text"); t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl"); t.textContent = d.code; markers.appendChild(t);
+        });
+    }
+
+    function setFitMode(v) { 
+        toggleView('map');
+        const h = parseInt(document.getElementById('hourVal').value) || 0;
+        const m = parseInt(document.getElementById('minVal').value) || 0;
+        const d = document.getElementById('schedDate').value;
+        if(!d) return alert("Select a date.");
+        const istMs = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`).getTime();
+        workDate = new Date(istMs - (MY_OFFSET * 3600000));
+        isFitMode = v; render(); 
+    }
+    function resetToLive() { isFitMode = false; toggleView('map'); render(); }
+    function copySlackMsg() { navigator.clipboard.writeText(document.getElementById('slack-msg').innerText); alert("Copied to clipboard!"); }
+    checkSession();
 </script>
 </body>
 </html>
