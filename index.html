@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Precision Team Harmony</title>
+    <title>Loom | Global Team Harmony</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -27,22 +27,19 @@
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
         
-        /* Updated Header Style */
-        .tz-header { padding: 10px 15px; font-size: 0.75rem; font-weight: 800; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .tz-info { display: flex; gap: 8px; align-items: center; }
+        /* Fixed Header: Name Left, Date Right */
+        .tz-header { padding: 10px 15px; font-size: 0.7rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; }
         
+        /* Unified Delete Visibility Logic */
+        .btn-hover-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; padding-left: 10px; }
+        .tz-header:hover .btn-hover-del, .loc-header:hover .btn-hover-del, .member-row:hover .btn-hover-del { opacity: 1; }
+
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .loc-header { padding: 8px 15px 4px 15px; font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.9); }
+        .loc-header { padding: 10px 15px 4px 15px; font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Updated Teammate Row */
         .member-row { padding: 6px 15px 6px 30px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
-        .member-row:hover { background: rgba(255,255,255,0.05); }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
         
-        /* Hover Deletion icon */
-        .btn-hover-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; }
-        .member-row:hover .btn-hover-del { opacity: 1; }
-
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
@@ -160,7 +157,13 @@
         }
     }
 
+    async function removeLocation(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
     async function removeMember(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
+    async function deleteFullTzGroup(tzName) {
+        if(!confirm(`Remove all offices in ${tzName}?`)) return;
+        const cities = Object.values(locationData).filter(l => l.tz === tzName).map(l => l.name);
+        await _supabase.from('locations').delete().in('name', cities); loadData();
+    }
 
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc'); sel.innerHTML = '';
@@ -197,19 +200,26 @@
             const timeStr = localTime.getHours().toString().padStart(2,'0') + ":" + localTime.getMinutes().toString().padStart(2,'0');
 
             let tzHtml = `<div class="timezone-group">
-                <div class="tz-header" style="color:${status.color}">
-                    <div class="tz-info"><span>${tz}</span><span>${dateStr}</span></div>
-                    <div><span>${timeStr}</span> <span style="margin-left:5px">${status.emoji}</span></div>
+                <div class="tz-header">
+                    <span>${tz}</span>
+                    <div style="display:flex; align-items:center;">
+                        <span>${dateStr} ${timeStr}</span>
+                        <span class="btn-hover-del" onclick="deleteFullTzGroup('${tz}')">×</span>
+                    </div>
                 </div>`;
             
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
-                tzHtml += `<div class="location-card"><div class="loc-header">${loc}</div>`;
+                tzHtml += `<div class="location-card">
+                    <div class="loc-header">
+                        <span>${loc}</span>
+                        <span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span>
+                    </div>`;
                 mates.forEach(m => { 
                     const s = getStatus(localTime.getHours());
                     if(s.work) available++;
                     tzHtml += `<div class="member-row">
-                        <div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div>
+                        <div><span class="status-dot" style="background:${s.color}"></span><span>${m.name} ${s.emoji}</span></div>
                         <span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span>
                     </div>`; 
                 });
@@ -225,9 +235,9 @@
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        line.setAttribute("x1", x); line.setAttribute("y1", 0); line.setAttribute("x2", x); line.setAttribute("y2", 400);
+        line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
         line.setAttribute("stroke", color); line.setAttribute("stroke-dasharray", "4");
-        txt.setAttribute("x", x + 5); txt.setAttribute("y", 15); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
+        txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
         txt.textContent = text;
         g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
     }
