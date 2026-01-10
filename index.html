@@ -88,9 +88,9 @@
         <footer id="scheduler">
             <input type="date" id="schedDate" style="padding:8px">
             <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
-            <select id="minVal" style="padding:8px"><option value="00">00</option><option value="30">30</option></select>
+            <select id="minVal" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();"><option value="00">00</option><option value="30">30</option></select>
             <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
-            <select id="durVal" style="padding:8px"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
+            <select id="durVal" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
             <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
@@ -104,7 +104,7 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let locationData = {}; let team = [];
-    let isFitMode = false; let workDate = new Date();
+    let isFitMode = false; let isMatchViewActive = false; let workDate = new Date();
     let chartExclusions = new Set();
 
     async function handleAuth() {
@@ -172,6 +172,7 @@
     }
 
     function toggleView(v) {
+        isMatchViewActive = (v === 'rec');
         document.getElementById('map-area').style.display = v === 'map' ? 'block' : 'none';
         document.getElementById('rec-view').style.display = v === 'rec' ? 'block' : 'none';
     }
