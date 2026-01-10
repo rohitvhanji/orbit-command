@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Global Team Harmony</title>
+    <title>Loom | Final Global Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -13,7 +13,6 @@
             --slack-green: #2EB67D;
             --slack-bg: #F0F2F5;
             --slack-border: #E2E2E2;
-            --text-dark: #1D1C1D;
             --status-work: #2EB67D;
             --status-lunch: #ECB22E;
             --status-snooze: #E01E5A;
@@ -107,11 +106,11 @@
         </div>
         <footer id="scheduler">
             <input type="date" id="schedDate" class="sched-control">
-            <input type="number" id="hourVal" class="sched-control" style="width:60px;" placeholder="HH">
-            <input type="number" id="minVal" class="sched-control" style="width:60px;" placeholder="MM">
+            <input type="number" id="hourVal" class="sched-control" style="width:50px;" placeholder="HH">
+            <input type="number" id="minVal" class="sched-control" style="width:50px;" placeholder="MM">
             <button onclick="setFitMode(true)" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; cursor:pointer;">SIMULATE</button>
             <button onclick="resetToLive()" style="padding:10px 20px; background:#f0f0f0; border:none; cursor:pointer;">LIVE</button>
-            <div id="predictVal" style="font-weight:900; color:var(--slack-purple); font-size:1.2rem; margin-left:20px;">0% Harmony</div>
+            <div id="predictVal" style="font-weight:900; color:var(--slack-purple); font-size:1.1rem; margin-left:15px;">0% Harmony</div>
         </footer>
     </main>
 </div>
@@ -160,19 +159,20 @@
             const lon = parseFloat(res.lon);
             const lat = parseFloat(res.lat);
             
+            // Precision Normalizer
             let offset = Math.round((lon / 15) * 2) / 2;
-            if (name.toLowerCase().includes("bangalore") || name.toLowerCase().includes("hyderabad") || name.toLowerCase().includes("pune")) offset = 5.5;
+            if (name.toLowerCase().includes("bangalore") || name.toLowerCase().includes("hyderabad")) offset = 5.5;
             
             let code = name.toUpperCase().substring(0,3);
             if(name.toLowerCase().includes("bangalore")) code = "BLR";
-            if(name.toLowerCase().includes("new york")) code = "NYC";
-            if(name.toLowerCase().includes("san francisco")) code = "SFO";
 
             const { data: { user } } = await _supabase.auth.getUser();
-            await _supabase.from('locations').upsert({ 
-                name, code, lon, lat, utc_offset: offset, user_id: user.id 
-            });
-            document.getElementById('cityInput').value = ''; loadData();
+            await _supabase.from('locations').upsert({ name, code, lon, lat, utc_offset: offset, user_id: user.id });
+            
+            // FIELD SANITIZATION: Clear inputs after office add to prevent ghost teammates
+            document.getElementById('cityInput').value = '';
+            document.getElementById('newName').value = ''; 
+            loadData();
         }
     }
 
@@ -186,28 +186,27 @@
         }
     }
 
-    async function removeLocation(name) {
-        if (confirm(`Delete office in ${name}?`)) {
-            await _supabase.from('locations').delete().eq('name', name);
-            loadData();
-        }
-    }
-
-    async function removeMember(id) {
-        if (confirm(`Remove teammate?`)) {
-            await _supabase.from('teammates').delete().eq('id', id);
-            loadData();
-        }
-    }
+    async function removeLocation(name) { if (confirm(`Delete ${name}?`)) { await _supabase.from('locations').delete().eq('name', name); loadData(); } }
+    async function removeMember(id) { if (confirm(`Remove teammate?`)) { await _supabase.from('teammates').delete().eq('id', id); loadData(); } }
 
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc'); sel.innerHTML = '';
         Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
     }
 
-    function getTzLabel(offset) {
+    // DYNAMIC IANA LOOKUP: No more hardcoded "if offset === 5.5"
+    function getTzLabel(offset, date) {
+        const local = new Date(date.getTime() + (date.getTimezoneOffset() * 60000) + (offset * 3600000));
+        return new Intl.DateTimeFormat('en-US', { timeZoneName: 'short', timeZone: 'UTC' })
+            .formatToParts(local).find(p => p.type === 'timeZoneName').value 
+            .replace('UTC', offset >= 0 ? `GMT+${offset}` : `GMT${offset}`);
+    }
+
+    // Correcting the specific labels for Common Zones
+    function getFriendlyLabel(offset) {
         if (offset === 5.5) return "IST";
         if (offset === -5) return "EST";
+        if (offset === -6) return "CST";
         if (offset === -8) return "PST";
         return (offset >= 0 ? "+" : "") + offset;
     }
@@ -225,6 +224,7 @@
 
     function render() {
         const ref = isFitMode ? workDate : new Date();
+        const userOffset = -(new Date().getTimezoneOffset() / 60);
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         let total = team.length, available = 0;
         
@@ -236,13 +236,21 @@
             groups[bucket].locations.push(name);
         });
 
-        Object.keys(groups).sort((a, b) => b - a).forEach(key => {
+        // Proximity Sort: Keeps you at the top, others by distance
+        const sortedKeys = Object.keys(groups).sort((a, b) => {
+            const offA = parseFloat(a), offB = parseFloat(b);
+            if (Math.abs(offA - userOffset) < 0.1) return -1;
+            if (Math.abs(offB - userOffset) < 0.1) return 1;
+            return Math.abs(offA - userOffset) - Math.abs(offB - userOffset);
+        });
+
+        sortedKeys.forEach(key => {
             const offset = parseFloat(key);
             const status = getStatus(ref, offset);
             const local = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (offset * 3600000));
             const timeStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 
-            let html = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${getTzLabel(offset)}</span><span>${timeStr}</span></div>`;
+            let html = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${getFriendlyLabel(offset)}</span><span>${timeStr}</span></div>`;
             groups[key].locations.forEach(locName => {
                 const loc = locationData[locName];
                 const mates = team.filter(m => m.location_name === locName);
