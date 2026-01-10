@@ -3,207 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Weaving Scheduling Harmony</title>
+    <title>Loom | TimeZoneDB Powered Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --slack-purple: #4A154B;
-            --slack-navy: #3F0E40;
-            --slack-blue: #1264A3;
-            --slack-green: #2EB67D;
-            --slack-bg: #F0F2F5;
-            --slack-border: #E2E2E2;
-            --text-dark: #1D1C1D;
-            --text-muted: #616061;
-            --status-work: #2EB67D;
-            --status-lunch: #ECB22E;
-            --status-snooze: #E01E5A;
-            --night-wash: rgba(15, 23, 42, 0.45);
+            --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
+            --slack-green: #2EB67D; --slack-border: #E2E2E2; --status-lunch: #ECB22E;
+            --status-snooze: #E01E5A; --night-wash: rgba(15, 23, 42, 0.55);
             --loom-gradient: linear-gradient(135deg, #4A154B 0%, #2c0b2d 100%);
         }
 
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: white; color: var(--text-dark);
-            overflow: hidden;
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
 
-        /* --- Auth Homepage Overlay --- */
-        #auth-overlay {
-            position: fixed; inset: 0; 
-            background: var(--loom-gradient);
-            z-index: 2000; display: flex; align-items: center; justify-content: center;
-            padding: 20px; overflow-y: auto;
-        }
+        /* Auth Overlay */
+        #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
+        .auth-input { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-main { width: 100%; border: none; padding: 14px; border-radius: 8px; font-weight: 800; cursor: pointer; }
 
-        .bg-mesh {
-            position: absolute; width: 150%; height: 150%;
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg');
-            background-size: cover; opacity: 0.05; filter: invert(1);
-            animation: drift 100s linear infinite;
-        }
-        @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .hero-container {
-            display: flex; width: 100%; max-width: 1100px;
-            align-items: center; justify-content: space-between; gap: 40px;
-            position: relative; z-index: 2;
-        }
-
-        .brand-section { flex: 1.2; text-align: left; color: white; }
-        .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
-        .brand-section p { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.9); margin-top: 20px; font-weight: 400; }
-
-        .auth-card {
-            flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px;
-        }
-
-        .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
-        .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
-        .btn-login { background: var(--slack-purple); color: white; }
-        .btn-signup { background: var(--slack-green); color: white; margin-top: 10px; }
-
-        /* --- Mobile View Switcher --- */
-        #view-switcher {
-            display: none; height: 50px; background: var(--slack-navy); color: white;
-            justify-content: space-around; align-items: center; z-index: 1001;
-        }
-        .view-tab { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 800; opacity: 0.6; text-transform: uppercase; cursor: pointer; padding: 15px 0; }
-        .view-tab.active { opacity: 1; border-bottom: 3px solid white; }
-
-        /* --- Sidebar & Layout --- */
         #app-shell { display: flex; height: 100%; width: 100%; }
-        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; z-index: 100; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
-        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center;}
-        .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: white; text-transform: uppercase; }
+        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center; }
         
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .mgmt-title { font-size: 0.65rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; margin-bottom: 8px; display: block; }
         .mgmt-input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid transparent; color: white; border-radius: 4px; margin-bottom: 6px; }
         
         #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
-        .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
-        .tz-header { padding: 8px 15px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; }
+        .tz-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
+        .tz-header { padding: 10px 15px; font-size: 0.75rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; }
         
         .location-card { border-bottom: 1px solid rgba(255,255,255,0.03); }
         .loc-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 700; }
-        
-        .btn-standard-del { cursor: pointer; opacity: 0; pointer-events: none; font-size: 1.2rem; color: rgba(255,255,255,0.4); padding: 0 5px; }
-        .loc-header:hover .btn-standard-del, .member-row:hover .btn-standard-del { opacity: 1; pointer-events: auto; }
-
         .member-row { padding: 8px 15px 8px 30px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+        .btn-del { cursor: pointer; opacity: 0.3; font-size: 1.2rem; color: #ff4d4d; }
+        .btn-del:hover { opacity: 1; }
 
-        /* --- Map Area --- */
-        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; }
-        #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
-        #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
-        #svg-map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        #main-view { flex-grow: 1; display: flex; flex-direction: column; background: #000; position: relative; }
+        #map-area { flex-grow: 1; position: relative; overflow: hidden; }
+        #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: cover; filter: saturate(0.5) brightness(0.8); }
+        #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        .map-label-text { font-size: 10px; font-weight: 900; text-transform: uppercase; paint-order: stroke; stroke: white; stroke-width: 2.5px; }
-        .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
+        .grid-line { stroke: rgba(255,255,255,0.2); stroke-dasharray: 4; }
+        .grid-label { font-size: 9px; fill: white; font-weight: 900; paint-order: stroke; stroke: black; stroke-width: 2px; }
+        .pin-lbl { font-size: 9px; fill: white; font-weight: 800; paint-order: stroke; stroke: black; stroke-width: 2px; }
 
-        #scheduler { 
-            position: absolute; bottom: 0; left: 0; right: 0; 
-            padding: 12px; background: rgba(255,255,255,0.98); 
-            border-top: 1px solid var(--slack-border); display: flex; 
-            gap: 10px; align-items: center; justify-content: center; z-index: 1000;
-            flex-wrap: wrap;
-        }
-        .sched-control { border: 1px solid var(--slack-border); padding: 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
-
-        /* --- Media Queries for Mobile --- */
-        @media (max-width: 768px) {
-            .hero-container { flex-direction: column; text-align: center; gap: 20px; }
-            .brand-section { text-align: center; }
-            .brand-section p { margin-bottom: 20px; }
-            
-            #view-switcher { display: flex; }
-            #sidebar { 
-                position: absolute; width: 100%; height: calc(100% - 50px); top: 50px; left: 0; 
-                display: none; z-index: 1000; 
-            }
-            #sidebar.mobile-active { display: flex; }
-            #main-view-container { height: calc(100% - 50px); }
-            
-            #scheduler { padding-bottom: 25px; }
-            .btn-main { padding: 12px; font-size: 1rem; }
-        }
+        #scheduler { padding: 12px; background: white; border-top: 1px solid #ddd; display: flex; gap: 10px; align-items: center; justify-content: center; }
+        .sched-control { border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
 <div id="auth-overlay">
-    <div class="bg-mesh"></div>
-    <div class="hero-container">
-        <div class="brand-section">
-            <h1>loom</h1>
-            <p>Weaving scheduling harmony for global teams.</p>
-        </div>
-        <div class="auth-card">
-            <input type="email" id="auth-email" class="auth-input" placeholder="Email Address">
-            <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
-            <button class="btn-main btn-login" onclick="handleAuth('login')">Login to Loom</button>
-            <div style="text-align: center; color: #bbb; margin: 5px 0; font-size: 0.9rem;">— or —</div>
-            <button class="btn-main btn-signup" onclick="handleAuth('signup')">Start Weaving</button>
-            <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
-            <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">Experience effortless coordination for your distributed team.</p>
-        </div>
+    <div class="auth-card">
+        <h2 style="margin:0; color:var(--slack-purple)">loom login</h2>
+        <input type="email" id="auth-email" class="auth-input" placeholder="Email">
+        <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
+        <button class="btn-main" style="background:var(--slack-purple); color:white" onclick="handleAuth('login')">Login</button>
+        <div id="auth-status" style="color:red; font-size:0.8rem; text-align:center;"></div>
     </div>
 </div>
 
-<nav id="view-switcher">
-    <div class="view-tab active" id="tab-roster" onclick="switchView('roster')">Roster</div>
-    <div class="view-tab" id="tab-map" onclick="switchView('map')">Map</div>
-</nav>
-
 <div id="app-shell">
     <aside id="sidebar">
-        <div class="sidebar-header">
-            <h2>LOOM</h2>
-            <span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
+        <div class="sidebar-header"><h2>LOOM</h2><span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6;">Logout</span></div>
+        <div class="mgmt-section">
+            <input type="text" id="cityInput" class="mgmt-input" placeholder="City name (e.g. Pune)">
+            <button class="btn-main" style="background:white; color:var(--slack-purple); padding:8px" onclick="lookupCity()">ADD OFFICE</button>
         </div>
         <div class="mgmt-section">
-            <span class="mgmt-title">Add Office</span>
-            <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
-            <button class="btn-main btn-login" style="padding: 10px; font-size: 0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
-        </div>
-        <div class="mgmt-section">
-            <span class="mgmt-title">Add Teammate</span>
-            <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
-            <select id="newLoc" class="mgmt-input" style="background: rgba(255,255,255,0.15);"></select>
-            <button class="btn-main btn-signup" style="padding: 10px; font-size: 0.8rem;" onclick="addMember()">ADD TEAMMATE</button>
+            <input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name">
+            <select id="newLoc" class="mgmt-input" style="background:rgba(255,255,255,0.1)"></select>
+            <button class="btn-main" style="background:var(--slack-green); color:white; padding:8px" onclick="addMember()">ADD TEAMMATE</button>
         </div>
         <div id="member-groups"></div>
     </aside>
 
-    <main id="main-view-container">
+    <main id="main-view">
         <div id="map-area">
             <div id="map-bg"></div>
             <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
-                <g id="day-night-layer"></g>
-                <g id="grid-lines-layer"></g>
-                <g id="grid-label-layer"></g>
-                <g id="time-text-layer"></g>
+                <g id="night-layer"></g>
+                <g id="grid-layer"></g>
                 <g id="marker-layer"></g>
             </svg>
         </div>
         <footer id="scheduler">
-            <input type="date" id="schedDate" class="sched-control" onchange="validate()">
-            <div style="display:flex; align-items:center; gap:5px;">
-                <input type="number" id="hourVal" class="sched-control" style="width:45px;" placeholder="HH" onblur="validate()">
-                <b>:</b>
-                <input type="number" id="minVal" class="sched-control" style="width:45px;" placeholder="MM" onblur="validate()">
-            </div>
-            <button class="btn-main btn-login" style="width:auto; padding: 10px 15px; font-size: 0.75rem;" onclick="setFitMode(true)">SIMULATE</button>
-            <button class="btn-main" style="width:auto; padding: 10px 15px; background:#f0f0f0; color:#333; font-size: 0.75rem;" onclick="resetToLive()">LIVE</button>
-            <div style="border-left:1px solid #ddd; padding-left:15px; text-align:center;">
-                <div id="predictVal" style="font-size:1.1rem; font-weight:900;">0%</div>
-                <div style="font-size:0.5rem; text-transform:uppercase; color:#888; font-weight:800;">Harmony</div>
-            </div>
+            <input type="date" id="schedDate" class="sched-control">
+            <input type="number" id="hourVal" class="sched-control" style="width:50px" placeholder="HH">
+            <button onclick="setSim(true)" class="sched-control" style="background:var(--slack-purple); color:white">SIMULATE</button>
+            <button onclick="setSim(false)" class="sched-control">LIVE</button>
+            <div id="harmonyVal" style="font-weight:900; color:var(--slack-purple); margin-left:10px">0% Harmony</div>
         </footer>
     </main>
 </div>
@@ -213,36 +103,13 @@
     const SUPABASE_KEY = 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh'; 
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let locationData = {};
-    let team = [];
-    let isFitMode = false;
-    let workDate = new Date();
+    let locationData = {}; let team = [];
+    let isSim = false; let simDate = new Date();
 
-    const TZ_MAP = { "-8": "PST", "-7": "MST", "-6": "CST", "-5": "EST", "-5.5": "EST", "-4": "AST", "0": "GMT", "1": "CET", "2": "EET", "3": "MSK", "4": "GST", "5.5": "IST", "7": "WIB", "8": "SGT", "9": "JST", "10": "AEST", "11": "AEDT" };
-    function getTZName(offset) { const s = offset.toString(); return TZ_MAP[s] || (offset >= 0 ? `GMT+${offset}` : `GMT${offset}`); }
-
-    // --- Mobile Switcher Logic ---
-    function switchView(view) {
-        const sidebar = document.getElementById('sidebar');
-        const rosterTab = document.getElementById('tab-roster');
-        const mapTab = document.getElementById('tab-map');
-        
-        if (view === 'roster') {
-            sidebar.classList.add('mobile-active');
-            rosterTab.classList.add('active');
-            mapTab.classList.remove('active');
-        } else {
-            sidebar.classList.remove('mobile-active');
-            mapTab.classList.add('active');
-            rosterTab.classList.remove('active');
-        }
-    }
-
-    // --- Auth ---
-    async function handleAuth(type) {
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-pass').value;
-        const { data, error } = type === 'login' ? await _supabase.auth.signInWithPassword({ email, password }) : await _supabase.auth.signUp({ email, password });
+    async function handleAuth(t) {
+        const e = document.getElementById('auth-email').value;
+        const p = document.getElementById('auth-pass').value;
+        const { error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
         if (error) document.getElementById('auth-status').innerText = error.message; else checkSession();
     }
     async function checkSession() {
@@ -251,147 +118,132 @@
     }
     async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
-    // --- Data Management ---
     async function loadData() {
         const { data: locs } = await _supabase.from('locations').select('*');
-        const { data: members } = await _supabase.from('teammates').select('*');
-        locationData = {};
-        if(locs) locs.forEach(l => { 
-            locationData[l.name] = { id: l.id, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: getTZName(l.utc_offset), lon: l.lon, lat: l.lat }; 
+        const { data: mems } = await _supabase.from('teammates').select('*');
+        locationData = {}; 
+        if(locs) locs.forEach(l => locationData[l.name] = l);
+        team = mems || [];
+        const sel = document.getElementById('newLoc'); sel.innerHTML = '';
+        Object.keys(locationData).sort().forEach(n => {
+            const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
         });
-        team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
-        populateLocDropdown(); render();
+        render();
     }
 
     async function lookupCity() {
-        const city = document.getElementById('cityInput').value.trim();
-        if (!city) return;
-        try {
-            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
-            const data = await resp.json();
-            if (data && data.length > 0) {
-                const res = data[0];
-                const offset = Math.round(parseFloat(res.lon) / 15 * 2) / 2;
+        const input = document.getElementById('cityInput').value.trim();
+        if(!input) return;
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
+        if(geo && geo[0]) {
+            // API Lookup using your TimeZoneDB Key
+            const apiKey = 'VW4CCUCGOI2M';
+            const tz = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
+            
+            if(tz.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
-                const name = res.display_name.split(',')[0];
-                await _supabase.from('locations').upsert({ name, code: name.substring(0,3).toUpperCase(), utc_offset: offset, lon: parseFloat(res.lon), lat: parseFloat(res.lat), user_id: user.id, tz: getTZName(offset) }, { onConflict: 'user_id,name' });
+                await _supabase.from('locations').upsert({
+                    name: input.charAt(0).toUpperCase() + input.slice(1).toLowerCase(),
+                    code: input.substring(0,3).toUpperCase(),
+                    lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat),
+                    utc_offset: tz.gmtOffset / 3600,
+                    tz: tz.abbreviation,
+                    user_id: user.id
+                });
                 document.getElementById('cityInput').value = ''; loadData();
             }
-        } catch (e) { console.error(e); }
+        }
     }
 
     async function addMember() {
-        const name = document.getElementById('newName').value.trim();
-        const loc = document.getElementById('newLoc').value;
-        if (name && loc) {
+        const n = document.getElementById('newName').value.trim();
+        const l = document.getElementById('newLoc').value;
+        if(n && l) {
             const { data: { user } } = await _supabase.auth.getUser();
-            await _supabase.from('teammates').insert([{ name, location_name: loc, user_id: user.id }]);
+            await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
             document.getElementById('newName').value = ''; loadData();
         }
     }
 
-    async function removeLocation(name) { if(confirm(`Delete ${name}?`)) { await _supabase.from('locations').delete().eq('name', name); loadData(); } }
-    async function removeMember(dbId) { await _supabase.from('teammates').delete().eq('id', dbId); loadData(); }
-
-    function populateLocDropdown() {
-        const sel = document.getElementById('newLoc'); sel.innerHTML = '';
-        Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
-    }
+    async function delLoc(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
+    async function delMem(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
 
     function getStatus(hr) {
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
-        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--status-lunch)", work: true };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
-        return { emoji: "🏠", color: "var(--slack-blue)", work: false };
+        if (hr >= 22 || hr < 7) return { e: "😴", c: "var(--status-snooze)", w: false };
+        if (hr >= 13 && hr < 14) return { e: "🍱", c: "var(--status-lunch)", w: true };
+        if (hr >= 9 && hr < 17) return { e: "💻", c: "var(--slack-green)", w: true };
+        return { e: "🏠", c: "var(--slack-blue)", w: false };
     }
 
     function render() {
-        const ref = isFitMode ? workDate : new Date();
+        const ref = isSim ? simDate : new Date();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
-        let total = team.length, available = 0;
         const groups = {};
-        Object.keys(locationData).forEach(name => { const tz = locationData[name].tz; if(!groups[tz]) groups[tz] = []; groups[tz].push(name); });
-
-        Object.keys(groups).sort().forEach(tz => {
-            const sampleTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (locationData[groups[tz][0]].offset * 3600000));
-            const status = getStatus(sampleTime.getHours());
-            let tzHtml = `<div class="timezone-group"><div class="tz-header" style="color:${status.color}"><span>${tz}</span><span>${sampleTime.getHours().toString().padStart(2,'0')}:00</span></div>`;
-            groups[tz].forEach(loc => {
-                const localTime = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (locationData[loc].offset * 3600000));
-                const mates = team.filter(m => m.loc === loc);
-                tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-standard-del" onclick="removeLocation('${loc}')">×</span></div>`;
-                mates.forEach(m => { 
-                    const s = getStatus(localTime.getHours());
-                    if(s.work) available++;
-                    tzHtml += `<div class="member-row"><div class="member-left-side"><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div class="member-right-side"><span>${s.emoji}</span><span class="btn-standard-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
-                });
-                tzHtml += `</div>`;
-            });
-            container.innerHTML += tzHtml + `</div>`;
+        Object.values(locationData).forEach(l => {
+            if(!groups[l.utc_offset]) groups[l.utc_offset] = { offset: l.utc_offset, label: l.tz, cities: [] };
+            groups[l.utc_offset].cities.push(l);
         });
-        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "%" : "0%";
+
+        let total = team.length, avail = 0;
+        Object.keys(groups).sort((a,b) => b-a).forEach(off => {
+            const g = groups[off];
+            const local = new Date(ref.getTime() + (ref.getTimezoneOffset() * 60000) + (off * 3600000));
+            const s = getStatus(local.getHours());
+            let html = `<div class="tz-group"><div class="tz-header" style="color:${s.c}"><span>${g.label}</span><span>${local.getHours().toString().padStart(2,'0')}:00</span></div>`;
+            g.cities.forEach(city => {
+                const mates = team.filter(t => t.location_name === city.name);
+                html += `<div class="location-card"><div class="loc-header"><span>${city.name}</span><span class="btn-del" onclick="delLoc('${city.name}')">×</span></div>`;
+                mates.forEach(m => {
+                    const st = getStatus(local.getHours()); if(st.w) avail++;
+                    html += `<div class="member-row"><span>${m.name}</span><span>${st.e} <span class="btn-del" onclick="delMem('${m.id}')">×</span></span></div>`;
+                });
+                html += `</div>`;
+            });
+            container.innerHTML += html + `</div>`;
+        });
+        document.getElementById('harmonyVal').innerText = total > 0 ? Math.round((avail/total)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
 
-    function addNeedleLabel(x, text, color, parent) {
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
-        line.setAttribute("stroke", color); line.setAttribute("stroke-width", "2"); line.setAttribute("stroke-dasharray", "4");
-        txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
-        txt.textContent = text;
-        g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
-    }
-
-    function drawMap(refDate) {
-        const night = document.getElementById('day-night-layer');
-        const lines = document.getElementById('grid-lines-layer');
-        const labels = document.getElementById('grid-label-layer');
-        const text = document.getElementById('time-text-layer');
+    function drawMap(ref) {
+        const night = document.getElementById('night-layer');
+        const grid = document.getElementById('grid-layer');
         const markers = document.getElementById('marker-layer');
-        night.innerHTML = ''; lines.innerHTML = ''; labels.innerHTML = ''; text.innerHTML = ''; markers.innerHTML = '';
-        const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
-        
-        for(let i=0; i<24; i++) {
-            const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
-            if (hrInt < 6 || hrInt >= 18) {
-                const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                r.setAttribute("x", x); r.setAttribute("y", 0); r.setAttribute("width", 33.4); r.setAttribute("height", 400);
-                r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r);
-            }
-            if (hrInt === 9) addNeedleLabel(x, "WORK START", "var(--slack-green)", labels);
-            else if (hrInt === 13) addNeedleLabel(x, "LUNCH", "#ECB22E", labels);
-            else if (hrInt === 17) addNeedleLabel(x, "WORK END", "var(--slack-green)", labels);
-            else if (hrInt === 22) addNeedleLabel(x, "SNOOZE", "var(--status-snooze)", labels);
+        night.innerHTML = grid.innerHTML = markers.innerHTML = '';
 
-            if(i % 4 === 0) {
-                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                t.setAttribute("x", x + 5); t.setAttribute("y", 15); t.setAttribute("class", "time-marker-txt");
-                t.textContent = `${hrInt}:00`; text.appendChild(t);
-            }
-        }
-        Object.keys(locationData).forEach(loc => {
-            const d = locationData[loc];
-            const px = (d.lon + 180) * (2.222); const py = (90 - d.lat) * (2.222);
-            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("class", "pin");
-            markers.appendChild(dot);
+        const utc = ref.getUTCHours() + (ref.getUTCMinutes()/60);
+        const nightX = ((utc + 6) % 24) * (800/24);
+        const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        r.setAttribute("x", nightX); r.setAttribute("width", 400); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)");
+        night.appendChild(r);
+
+        // Sun & Moon
+        const sunX = ((12 - utc + 24) % 24) * (800/24);
+        const moonX = ((24 - utc + 24) % 24) * (800/24);
+        const sTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        sTxt.setAttribute("x", sunX); sTxt.setAttribute("y", 380); sTxt.textContent = "☀️"; grid.appendChild(sTxt);
+        const mTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        mTxt.setAttribute("x", moonX); mTxt.setAttribute("y", 380); mTxt.textContent = "🌙"; grid.appendChild(mTxt);
+
+        Object.values(locationData).forEach(loc => {
+            const px = (loc.lon + 180) * (800/360); const py = (90 - loc.lat) * (400/180);
+            const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            c.setAttribute("cx", px); c.setAttribute("cy", py); c.setAttribute("r", 3); c.setAttribute("fill", "white");
+            markers.appendChild(c);
             const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl");
-            t.textContent = d.code; markers.appendChild(t);
+            t.setAttribute("x", px + 4); t.setAttribute("y", py); t.setAttribute("class", "pin-lbl"); t.textContent = loc.code;
+            markers.appendChild(t);
         });
     }
 
-    function setFitMode(v) { 
-        const h = parseInt(document.getElementById('hourVal').value) || 0;
-        const m = parseInt(document.getElementById('minVal').value) || 0;
+    function setSim(v) {
+        if(!v) { isSim = false; render(); return; }
         const d = document.getElementById('schedDate').value;
-        if(!d) return alert("Select a date.");
-        workDate = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`);
-        isFitMode = v; render(); 
+        const h = document.getElementById('hourVal').value || 0;
+        if(!d) return alert("Pick a date");
+        simDate = new Date(`${d}T${h.toString().padStart(2,'0')}:00:00`);
+        isSim = true; render();
     }
-    function resetToLive() { isFitMode = false; workDate = new Date(); render(); }
     checkSession();
 </script>
 </body>
