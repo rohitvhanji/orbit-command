@@ -45,12 +45,12 @@
         .slack-copy-box { background: #f4f4f4; padding: 15px; border-radius: 6px; border: 1px dashed #ccc; font-family: monospace; font-size: 0.8rem; margin-top: 30px; position: relative; }
         .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
         .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
-        .chart-grid { flex-grow: 1; display: flex; gap: 4px; }
+        .chart-grid { flex-grow: 1; display: flex; gap: 2px; }
         .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; }
         .match-row .chart-box { cursor: pointer; border: 1px solid rgba(0,0,0,0.03); }
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
         .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
-        .chart-tick { flex: 1; font-size: 0.6rem; text-align: center; color: #aaa; font-weight: 900; }
+        .chart-tick { flex: 1; font-size: 0.55rem; text-align: center; color: #aaa; font-weight: 900; }
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
@@ -82,11 +82,7 @@
                 </div>
                 <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP 3 SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
                 <div id="chart-body"></div>
-                <div class="slack-copy-box">
-                    <strong>SLACK RECOMMENDATION:</strong><br>
-                    <div id="slack-msg" style="margin-top:10px; color:#333;">Select a date to generate message...</div>
-                    <button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button>
-                </div>
+                <div class="slack-copy-box"><strong>SLACK RECOMMENDATION:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date to generate message...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button></div>
             </div>
         </div>
         <footer id="scheduler">
@@ -98,7 +94,6 @@
             <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
             <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
             <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
-            <div id="predictVal" style="font-weight:900; margin-left:15px">0% Harmony</div>
         </footer>
     </main>
 </div>
@@ -128,9 +123,7 @@
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
-        if(locs) locs.forEach(l => { 
-            locationData[l.name] = { id: l.id, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; 
-        });
+        if(locs) locs.forEach(l => { locationData[l.name] = { id: l.id, code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
         team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
         populateLocDropdown(); render();
     }
@@ -144,11 +137,7 @@
             const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
             if(tzR.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
-                await _supabase.from('locations').upsert({
-                    name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(),
-                    lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat),
-                    utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id
-                }, { onConflict: 'user_id,name' });
+                await _supabase.from('locations').upsert({ name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(), lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id }, { onConflict: 'user_id,name' });
                 document.getElementById('cityInput').value = ''; loadData();
             }
         }
@@ -188,6 +177,7 @@
     }
 
     function buildMatchChart() {
+        toggleView('rec');
         const dS = document.getElementById('schedDate').value;
         const bD = dS ? new Date(dS + "T00:00:00") : new Date();
         const body = document.getElementById('chart-body');
@@ -195,8 +185,9 @@
         body.innerHTML = ''; recSlots.innerHTML = '';
 
         const uTzs = [...new Set(Object.values(locationData).map(l => l.tz))];
-        const count = document.getElementById('minVal').value === "30" ? 48 : 24;
-        const stepMs = (24/count) * 60 * 60000;
+        const is30m = document.getElementById('minVal').value === "30";
+        const count = is30m ? 48 : 24;
+        const stepMs = is30m ? (30 * 60000) : (60 * 60000);
 
         let timeline = `<div class="chart-timeline">`;
         for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
@@ -204,9 +195,7 @@
 
         uTzs.forEach(tzL => {
             const m = Object.values(locationData).find(l => l.tz === tzL);
-            let row = `<div class="chart-row">
-                <div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div>
-                <div class="chart-grid">`;
+            let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${chartExclusions.has(tzL)?'':'checked'} onchange="toggleEx('${tzL}')"> <span>${tzL}</span></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){
                 const local = new Date(bD.getTime() + (i * stepMs) + (bD.getTimezoneOffset()*60000) + (m.offset * 3600000));
                 row += `<div class="chart-box" style="background:${getStatus(local).color}"></div>`;
@@ -231,8 +220,7 @@
 
         const sorted = results.sort((a,b) => b.score - a.score).slice(0, 3);
         sorted.forEach(r => {
-            const btn = document.createElement('button');
-            btn.className = 'rec-btn';
+            const btn = document.createElement('button'); btn.className = 'rec-btn';
             btn.innerText = `${r.time.getHours().toString().padStart(2,'0')}:${r.time.getMinutes().toString().padStart(2,'0')} (${r.score}%)`;
             btn.onclick = () => syncAndRender(r.time);
             recSlots.appendChild(btn);
@@ -240,7 +228,6 @@
 
         const dateStr = bD.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dateStr}, the best slots are: ${sorted.map(s => s.time.getHours() + ":" + s.time.getMinutes().toString().padStart(2,'0')).join(', ')}. Currently looking at ${sorted[0].score}% Team Harmony!`;
-        toggleView('rec');
     }
 
     function toggleEx(l) { if(chartExclusions.has(l)) chartExclusions.delete(l); else chartExclusions.add(l); buildMatchChart(); }
@@ -250,10 +237,7 @@
         if(!filtered.length) return 0;
         let count = 0;
         const uZ = t.getTime() + (t.getTimezoneOffset() * 60000);
-        filtered.forEach(m => {
-            const loc = locationData[m.loc];
-            if(getStatus(new Date(uZ + (loc.offset * 3600000))).work) count++;
-        });
+        filtered.forEach(m => { const loc = locationData[m.loc]; if(getStatus(new Date(uZ + (loc.offset * 3600000))).work) count++; });
         return Math.round((count / filtered.length) * 100);
     }
 
@@ -261,11 +245,7 @@
         const ref = isFitMode ? workDate : new Date();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         const groups = {};
-        Object.keys(locationData).forEach(name => { 
-            const label = locationData[name].tz || "UTC";
-            if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] };
-            groups[label].cities.push(name);
-        });
+        Object.keys(locationData).forEach(name => { const label = locationData[name].tz || "UTC"; if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] }; groups[label].cities.push(name); });
         const gZ = ref.getTime() + (ref.getTimezoneOffset() * 60000);
         Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
             const g = groups[tzK];
@@ -274,20 +254,11 @@
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
-                mates.forEach(m => { 
-                    const lM = locationData[loc];
-                    if (lM) {
-                        const s = getStatus(new Date(gZ + (lM.offset * 3600000)));
-                        tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
-                    }
-                });
+                mates.forEach(m => { const lM = locationData[loc]; if (lM) { const s = getStatus(new Date(gZ + (lM.offset * 3600000))); tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div style="display:flex; align-items:center;"><span>${s.emoji}</span><span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; } });
                 tzHtml += `</div>`;
             });
             container.innerHTML += tzHtml + `</div>`;
         });
-        let t = 0, av = 0;
-        team.forEach(m => { const lM = locationData[m.loc]; if (lM) { t++; if(getStatus(new Date(gZ + (lM.offset * 3600000))).work) av++; } });
-        document.getElementById('predictVal').innerText = t > 0 ? Math.round((av/t)*100) + "% Harmony" : "0%";
         drawMap(ref);
     }
 
@@ -298,8 +269,7 @@
         line.setAttribute("x1", x); line.setAttribute("y1", 5); line.setAttribute("x2", x); line.setAttribute("y2", 400);
         line.setAttribute("class", "grid-line");
         txt.setAttribute("x", x + 5); txt.setAttribute("y", 20); txt.setAttribute("fill", color); txt.setAttribute("class", "map-label-text");
-        txt.textContent = text;
-        g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
+        txt.textContent = text; g.appendChild(line); g.appendChild(txt); parent.appendChild(g);
     }
 
     function drawMap(refDate) {
@@ -310,11 +280,7 @@
         const utcHour = refDate.getUTCHours() + refDate.getUTCMinutes()/60;
         for(let i=0; i<24; i++) {
             const lon = (i*15)-180; const x = (lon+180)*2.222; const hrInt = Math.floor((24+utcHour+(lon/15))%24);
-            if (hrInt < 6 || hrInt >= 18) {
-                const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400);
-                r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r);
-            }
+            if (hrInt < 6 || hrInt >= 18) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)"); night.appendChild(r); }
             if (hrInt === 9) addNeedleLabel(x, "WORK START", "var(--slack-green)", labels);
             else if (hrInt === 13) addNeedleLabel(x, "LUNCH", "#ECB22E", labels);
             else if (hrInt === 17) addNeedleLabel(x, "WORK END", "var(--slack-green)", labels);
@@ -322,24 +288,18 @@
         }
         const sunX = (((12 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
         const moonX = (((24 - utcHour) * 15) + 180 + 360) % 360 * 2.222;
-        const sun = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        sun.setAttribute("x", sunX - 10); sun.setAttribute("y", 350); sun.setAttribute("font-size", "25"); sun.textContent = "☀️";
-        const moon = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 350); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
+        const sun = document.createElementNS("http://www.w3.org/2000/svg", "text"); sun.setAttribute("x", sunX - 10); sun.setAttribute("y", 350); sun.setAttribute("font-size", "25"); sun.textContent = "☀️";
+        const moon = document.createElementNS("http://www.w3.org/2000/svg", "text"); moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 350); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
         markers.appendChild(sun); markers.appendChild(moon);
         Object.values(locationData).forEach(d => {
             const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
-            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); 
-            dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "rgba(0,0,0,0.4)");
-            markers.appendChild(dot);
-            const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl");
-            t.textContent = d.code; markers.appendChild(t);
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "rgba(0,0,0,0.4)"); markers.appendChild(dot);
+            const t = document.createElementNS("http://www.w3.org/2000/svg", "text"); t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl"); t.textContent = d.code; markers.appendChild(t);
         });
     }
 
     function setFitMode(v) { 
+        toggleView('map');
         const h = parseInt(document.getElementById('hourVal').value) || 0;
         const m = parseInt(document.getElementById('minVal').value) || 0;
         const d = document.getElementById('schedDate').value;
