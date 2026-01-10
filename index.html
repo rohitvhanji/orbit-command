@@ -70,7 +70,7 @@
         <div id="rec-view">
             <div class="chart-centered-content">
                 <div class="chart-header-row">
-                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Anchored to IST Reference</span></div>
+                    <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Locked IST Reference</span></div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Work</div>
                         <div class="legend-item"><div class="legend-box" style="background:var(--slack-blue)"></div> Home</div>
@@ -79,7 +79,7 @@
                     </div>
                     <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
                 </div>
-                <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP RECO SLOTS (IST):</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
+                <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP RECO SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
                 <div id="chart-body"></div>
                 <div class="slack-copy-box" style="background:#f4f4f4; padding:15px; border-radius:6px; border:1px dashed #ccc; font-family:monospace; font-size:0.8rem; margin-top:30px; position:relative;">
                     <strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button>
@@ -108,7 +108,7 @@
     let isFitMode = false; let isMatchViewActive = false;
     let workDateUTC_MS = Date.now();
     let chartExclusions = new Set();
-    const MY_OFFSET = 5.5; // IST 
+    const MY_OFFSET = 5.5; // IST Anchor
 
     async function handleAuth() {
         const e = document.getElementById('auth-email').value;
@@ -221,7 +221,8 @@
             const istH = Math.floor(i * stepMs / 3600000);
             const istM = (i * stepMs / 60000) % 60;
             
-            const data = calcStrictEmpathyMatch(slotUTC_MS);
+            // NEW STRICT SWITCH LOGIC
+            const data = calcStrictSwitchLogic(slotUTC_MS);
             results.push({ 
                 utc: slotUTC_MS, 
                 color: data.color, 
@@ -239,7 +240,7 @@
             g.appendChild(box);
         }
 
-        // TIERED RECO: Green > Yellow (All Awake/No Red/No Green)
+        // TIERED RECO: Green > Yellow
         const sortedRecs = results.filter(r => !r.hasRed && (r.isGreen || r.isYellow)).sort((a, b) => {
             if (a.isGreen && !b.isGreen) return -1;
             if (!a.isGreen && b.isGreen) return 1;
@@ -255,36 +256,37 @@
 
         const dLabel = new Date(dS + "T12:00:00Z").toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         if(sortedRecs.length > 0) {
-            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best IST slots are: ${sortedRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}. This time maybe works for ${sortedRecs[0].score}% of attendees!`;
+            document.getElementById('slack-msg').innerText = `Hey Team! 🌍 For our meeting on ${dLabel}, the best IST slots are: ${sortedRecs.map(s => s.h + ":" + s.m.toString().padStart(2,'0')).join(', ')}. This time works for roughly ${sortedRecs[0].score}% of attendees!`;
         } else {
-            document.getElementById('slack-msg').innerText = "No acceptable slots found for this date. (Everyone is sleeping or mixed!)";
+            document.getElementById('slack-msg').innerText = "No acceptable slots found for this date.";
         }
     }
 
-    function calcStrictEmpathyMatch(utcMS) {
+    function calcStrictSwitchLogic(utcMS) {
         const filtered = team.filter(m => locationData[m.loc] && !chartExclusions.has(locationData[m.loc].tz));
         if(!filtered.length) return { score: 0, color: 'var(--status-weekend)', hasRed: false, isGreen: false, isYellow: false };
         
-        let hasRed = false;
+        let foundRed = false;
+        let foundGreen = false;
         let allGreen = true;
-        let allAwakeNoWork = true;
+        let allAwakeNoGreen = true;
         let workCount = 0;
 
         for (const m of filtered) {
             const s = getStatus(utcMS + (locationData[m.loc].offset * 3600000));
-            if(s.snooze) { hasRed = true; break; } // EXIT IMMEDIATELY
+            if(s.snooze) { foundRed = true; break; } // DEAL BREAKER
+            if(s.work) { foundGreen = true; workCount++; }
             if(!s.work) allGreen = false;
-            if(s.work) { allAwakeNoWork = false; workCount++; }
+            if(s.work) allAwakeNoGreen = false; 
         }
 
         const score = Math.round((workCount / filtered.length) * 100);
 
-        // WATERFALL PRIORITY
-        if(hasRed) return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
+        if(foundRed) return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
         if(allGreen) return { score, color: 'var(--slack-green)', hasRed: false, isGreen: true, isYellow: false };
-        if(allAwakeNoWork) return { score, color: 'var(--status-lunch)', hasRed: false, isGreen: false, isYellow: true };
+        if(allAwakeNoGreen) return { score, color: 'var(--status-lunch)', hasRed: false, isGreen: false, isYellow: true };
         
-        // MIXED CASE (Green & Blue mix) -> Default Red per strict rules
+        // EVERYTHING ELSE (MIXED) -> RED
         return { score, color: 'var(--status-snooze)', hasRed: true, isGreen: false, isYellow: false };
     }
 
