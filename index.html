@@ -2,63 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Ultimate Sync Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loom | Final Verified Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-green: #2EB67D;
             --status-weekend: #A0A0A0; --night-wash: rgba(10, 15, 30, 0.75);
-            --status-lunch: #ECB22E; --status-snooze: #E01E5A;
+            --status-lunch: #ECB22E; --status-snooze: #E01E5A; --slack-blue: #1264A3;
         }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: white; overflow: hidden; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, system-ui, sans-serif; background: white; overflow: hidden; }
         #app-shell { display: flex; height: 100%; width: 100%; }
-        
-        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center; }
-        
-        .mgmt-input { width: 90%; margin: 5px 5%; padding: 10px; border-radius: 4px; border: none; font-size: 0.9rem; }
-        .btn-action { width: 90%; margin: 5px 5% 15px 5%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-
-        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 80px; }
+        #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 18px; background: var(--slack-navy); font-weight: 900; }
+        .mgmt-input { width: 90%; margin: 5px 5%; padding: 10px; border-radius: 4px; border: none; font-size: 0.9rem; box-sizing: border-box; }
+        .btn-action { width: 90%; margin: 5px 5% 15px 5%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 20px; }
         .tz-group { background: rgba(0,0,0,0.1); margin-bottom: 2px; }
         .tz-header { padding: 12px; font-size: 0.75rem; font-weight: 800; background: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center; }
-        
         .loc-card { border-bottom: 1px solid rgba(255,255,255,0.05); }
         .loc-header { padding: 10px 12px 5px 12px; font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
         .member-row { padding: 6px 12px 6px 25px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-        
-        .btn-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; }
-        .tz-header:hover .btn-del, .loc-header:hover .btn-del, .member-row:hover .btn-del { opacity: 0.8; }
-
-        #main-view-container { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        .btn-del { cursor: pointer; color: #ff4d4d; font-size: 1.2rem; opacity: 0.3; transition: 0.2s; }
+        .tz-group:hover .btn-del, .loc-card:hover .btn-del, .member-row:hover .btn-del { opacity: 1; }
+        #main-view { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
         #map-area { flex-grow: 1; position: relative; background: #000; overflow: hidden; }
-        #map-bg { width: 100%; height: 100%; background: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg') center/cover; filter: saturate(0.5) brightness(0.7); }
+        #map-bg { width: 100%; height: 100%; background: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg') center/cover; filter: saturate(0.4) brightness(0.6); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        
         .map-grid-text { font-size: 9px; font-weight: 900; paint-order: stroke; stroke: black; stroke-width: 2px; }
-        .pin-lbl { font-size: 9px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 2px; }
-
-        #scheduler { padding: 15px 20px; background: #fff; border-top: 1px solid #ddd; display: flex; gap: 15px; align-items: center; justify-content: center; z-index: 100; }
-        .sched-control { border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+        #scheduler { padding: 15px; background: #fff; border-top: 1px solid #ddd; display: flex; gap: 10px; align-items: center; justify-content: center; }
+        .sched-control { border: 1px solid #ddd; padding: 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <div id="app-shell">
     <aside id="sidebar">
-        <div class="sidebar-header"><h2>LOOM</h2></div>
-        <div style="padding-top: 10px;">
-            <input type="text" id="cityInput" class="mgmt-input" placeholder="City Name (e.g. Pune)">
-            <button onclick="lookupCity()" class="btn-action" style="background: white; color: var(--slack-purple);">ADD OFFICE</button>
+        <div class="sidebar-header">LOOM</div>
+        <div style="padding-top:10px">
+            <input type="text" id="cityInput" class="mgmt-input" placeholder="City (e.g. Pune)">
+            <button onclick="lookupCity()" class="btn-action" style="background:white; color:var(--slack-purple)">ADD OFFICE</button>
             <input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name">
-            <select id="newLoc" class="mgmt-input" style="background: rgba(255,255,255,0.1); color: white;"></select>
-            <button onclick="addMember()" class="btn-action" style="background: var(--slack-green); color: white;">ADD TEAMMATE</button>
+            <select id="newLoc" class="mgmt-input" style="background:rgba(255,255,255,0.1); color:white;"></select>
+            <button onclick="addMember()" class="btn-action" style="background:var(--slack-green); color:white">ADD TEAMMATE</button>
         </div>
         <div id="member-groups"></div>
     </aside>
 
-    <main id="main-view-container">
+    <main id="main-view">
         <div id="map-area">
             <div id="map-bg"></div>
             <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none">
@@ -69,11 +60,11 @@
         </div>
         <footer id="scheduler">
             <input type="date" id="schedDate" class="sched-control">
-            <input type="number" id="hourVal" class="sched-control" style="width:50px;" placeholder="HH">
-            <input type="number" id="minVal" class="sched-control" style="width:50px;" placeholder="MM">
-            <button onclick="setFitMode(true)" class="sched-control" style="background:var(--slack-purple); color:white; border:none; cursor:pointer;">SIMULATE</button>
-            <button onclick="resetToLive()" class="sched-control" style="cursor:pointer;">LIVE</button>
-            <div id="predictVal" style="font-weight:900; color:var(--slack-purple); margin-left:10px;">0% Harmony</div>
+            <input type="number" id="hourVal" class="sched-control" style="width:50px" placeholder="HH">
+            <input type="number" id="minVal" class="sched-control" style="width:50px" placeholder="MM">
+            <button onclick="setSim(true)" class="sched-control" style="background:var(--slack-purple); color:white">SIMULATE</button>
+            <button onclick="setSim(false)" class="sched-control">LIVE</button>
+            <div id="harmonyText" style="font-weight:bold; color:var(--slack-purple); margin-left:10px">0% Harmony</div>
         </footer>
     </main>
 </div>
@@ -84,42 +75,43 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let locationData = {}; let team = [];
-    let isFitMode = false; let workDate = new Date();
+    let isSim = false; let simDate = new Date();
 
-    const TZ_REGISTRY = {
+    const TZ_MAP = {
         "pune": "Asia/Kolkata", "bengaluru": "Asia/Kolkata", "hyderabad": "Asia/Kolkata", "chennai": "Asia/Kolkata",
-        "chicago": "America/Chicago", "new york": "America/New_York", "san francisco": "America/Los_Angeles",
-        "london": "Europe/London", "dubai": "Asia/Dubai", "singapore": "Asia/Singapore"
+        "mumbai": "Asia/Kolkata", "delhi": "Asia/Kolkata", "chicago": "America/Chicago", 
+        "new york": "America/New_York", "san francisco": "America/Los_Angeles", "london": "Europe/London"
     };
 
     async function loadData() {
         const { data: locs } = await _supabase.from('locations').select('*');
-        const { data: members } = await _supabase.from('teammates').select('*');
-        locationData = {};
-        if(locs) locs.forEach(l => { locationData[l.name] = l; });
-        team = members || [];
-        populateLocDropdown(); render();
+        const { data: mems } = await _supabase.from('teammates').select('*');
+        locationData = {}; 
+        if(locs) locs.forEach(l => locationData[l.name] = l);
+        team = mems || [];
+        const sel = document.getElementById('newLoc'); sel.innerHTML = '';
+        Object.keys(locationData).sort().forEach(n => {
+            const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
+        });
+        render();
     }
 
     async function lookupCity() {
         const input = document.getElementById('cityInput').value.trim();
-        if (!input) return;
-        const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`);
-        const geoData = await geoResp.json();
-        if (geoData && geoData[0]) {
-            const res = geoData[0];
-            const tzId = TZ_REGISTRY[input.toLowerCase()] || "UTC";
-            let code = input.substring(0,3).toUpperCase();
-            if(input.toLowerCase() === "pune") code = "PNQ";
-            if(input.toLowerCase() === "bengaluru") code = "BLR";
-
+        if(!input) return;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
+        if(res && res[0]) {
+            const tzId = TZ_MAP[input.toLowerCase()] || "UTC";
+            const cleanName = input.charAt(0).toUpperCase() + input.slice(1).toLowerCase();
             const { data: { user } } = await _supabase.auth.getUser();
-            await _supabase.from('locations').upsert({ 
-                name: input.charAt(0).toUpperCase() + input.slice(1).toLowerCase(), 
-                code, lon: parseFloat(res.lon), lat: parseFloat(res.lat), 
-                tz_id: tzId, user_id: user.id 
+            await _supabase.from('locations').upsert({
+                name: cleanName, code: input.substring(0,3).toUpperCase(),
+                lon: parseFloat(res[0].lon), lat: parseFloat(res[0].lat),
+                tz_id: tzId, user_id: user.id
             });
-            document.getElementById('cityInput').value = ''; loadData();
+            document.getElementById('cityInput').value = '';
+            document.getElementById('newName').value = '';
+            loadData();
         }
     }
 
@@ -129,132 +121,92 @@
         if(name && loc) {
             const { data: { user } } = await _supabase.auth.getUser();
             await _supabase.from('teammates').insert([{ name, location_name: loc, user_id: user.id }]);
-            document.getElementById('newName').value = ''; loadData();
+            document.getElementById('newName').value = '';
+            loadData();
         }
     }
 
-    async function deleteLoc(name) { if(confirm(`Delete ${name}?`)) { await _supabase.from('locations').delete().eq('name', name); loadData(); } }
-    async function deleteMember(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
-    async function deleteFullTzGroup(tzId) {
-        if(!confirm(`Delete all in ${tzId}?`)) return;
-        const cities = Object.values(locationData).filter(l => l.tz_id === tzId).map(l => l.name);
-        await _supabase.from('locations').delete().in('name', cities); loadData();
-    }
+    async function delLoc(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
+    async function delMem(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
 
-    function populateLocDropdown() {
-        const sel = document.getElementById('newLoc'); sel.innerHTML = '';
-        Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
-    }
-
-    function getStatus(baseDate, tzId) {
-        const local = new Date(baseDate.toLocaleString("en-US", {timeZone: tzId}));
-        const hr = local.getHours();
-        const day = local.getDay();
-        if ([0, 6].includes(day)) return { emoji: "🏖️", color: "var(--status-weekend)", work: false };
-        if (hr >= 22 || hr < 7) return { emoji: "😴", color: "var(--status-snooze)", work: false };
-        if (hr >= 13 && hr < 14) return { emoji: "🍱", color: "var(--slack-green)", work: true };
-        if (hr >= 9 && hr < 17) return { emoji: "💻", color: "var(--slack-green)", work: true };
-        return { emoji: "🏠", color: "var(--slack-blue)", work: false };
+    function getStatus(date, tz) {
+        const local = new Date(date.toLocaleString("en-US", {timeZone: tz}));
+        const hr = local.getHours(); const day = local.getDay();
+        if([0,6].includes(day)) return { e: "🏖️", c: "var(--status-weekend)", w: false };
+        if(hr >= 22 || hr < 7) return { e: "😴", c: "var(--status-snooze)", w: false };
+        if(hr >= 9 && hr < 17) return { e: "💻", c: "var(--slack-green)", w: true };
+        return { e: "🏠", c: "var(--slack-blue)", w: false };
     }
 
     function render() {
-        const ref = isFitMode ? workDate : new Date();
+        const ref = isSim ? simDate : new Date();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         const groups = {};
-        Object.keys(locationData).forEach(name => {
-            const loc = locationData[name];
-            if(!groups[loc.tz_id]) groups[loc.tz_id] = { id: loc.tz_id, cities: [] };
-            groups[loc.tz_id].cities.push(loc);
+        Object.values(locationData).forEach(l => {
+            if(!groups[l.tz_id]) groups[l.tz_id] = { id: l.tz_id, cities: [] };
+            groups[l.tz_id].cities.push(l);
         });
 
-        let total = team.length, available = 0;
+        let total = team.length, avail = 0;
         Object.keys(groups).forEach(tzId => {
             const timeStr = ref.toLocaleTimeString('en-US', { timeZone: tzId, hour12: false, hour: '2-digit', minute: '2-digit', weekday: 'short', month: 'short', day: 'numeric' });
             const tzCode = new Intl.DateTimeFormat('en-US', { timeZone: tzId, timeZoneName: 'short' }).formatToParts(ref).find(p => p.type === 'timeZoneName').value;
+            const stat = getStatus(ref, tzId);
             
-            let html = `<div class="tz-group"><div class="tz-header"><span>${tzCode} • ${timeStr}</span><span class="btn-del" onclick="deleteFullTzGroup('${tzId}')">×</span></div>`;
+            let html = `<div class="tz-group"><div class="tz-header" style="color:${stat.c}"><span>${tzCode} • ${timeStr}</span></div>`;
             groups[tzId].cities.forEach(city => {
                 const mates = team.filter(t => t.location_name === city.name);
-                html += `<div class="loc-card"><div class="loc-header"><span>${city.name}</span><span class="btn-del" onclick="deleteLoc('${city.name}')">×</span></div>`;
+                html += `<div class="loc-card"><div class="loc-header"><span>${city.name}</span><span class="btn-del" onclick="delLoc('${city.name}')">×</span></div>`;
                 mates.forEach(m => {
-                    const s = getStatus(ref, tzId); if(s.work) available++;
-                    html += `<div class="member-row"><span>${m.name}</span><span>${s.emoji} <span class="btn-del" onclick="deleteMember('${m.id}')">×</span></span></div>`;
+                    const s = getStatus(ref, tzId); if(s.w) avail++;
+                    html += `<div class="member-row"><span>${m.name}</span><span>${s.e} <span class="btn-del" onclick="delMem('${m.id}')">×</span></span></div>`;
                 });
                 html += `</div>`;
             });
             container.innerHTML += html + `</div>`;
         });
-        document.getElementById('predictVal').innerText = total > 0 ? Math.round((available/total)*100) + "% Harmony" : "0% Harmony";
+        document.getElementById('harmonyText').innerText = total > 0 ? Math.round((avail/total)*100) + "% Harmony" : "0% Harmony";
         drawMap(ref);
     }
 
-    function addGridLine(x, text, color, parent) {
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        l.setAttribute("x1", x); l.setAttribute("y1", 0); l.setAttribute("x2", x); l.setAttribute("y2", 400);
-        l.setAttribute("stroke", color); l.setAttribute("stroke-dasharray", "4");
-        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("x", x + 3); t.setAttribute("y", 20); t.setAttribute("fill", color); t.setAttribute("class", "map-grid-text");
-        t.textContent = text;
-        g.appendChild(l); g.appendChild(t); parent.appendChild(g);
-    }
-
-    function drawMap(refDate) {
+    function drawMap(ref) {
         const night = document.getElementById('day-night-layer');
         const grid = document.getElementById('grid-layer');
         const markers = document.getElementById('marker-layer');
-        night.innerHTML = ''; grid.innerHTML = ''; markers.innerHTML = '';
+        night.innerHTML = grid.innerHTML = markers.innerHTML = '';
 
-        const utcHr = refDate.getUTCHours() + (refDate.getUTCMinutes()/60);
-        const nightStart = ((utcHr + 6) % 24) * (800/24);
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", nightStart); rect.setAttribute("width", 400); rect.setAttribute("height", 400);
-        rect.setAttribute("fill", "var(--night-wash)"); night.appendChild(rect);
+        const utcHr = ref.getUTCHours() + (ref.getUTCMinutes()/60);
+        const nightX = ((utcHr + 6) % 24) * (800/24);
+        const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        r.setAttribute("x", nightX); r.setAttribute("width", 400); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)");
+        night.appendChild(r);
 
-        // Grid Lines (Login, Lunch, etc)
-        for(let i=0; i<24; i++) {
-            const x = i * (800/24);
-            const hr = Math.floor((i - utcHr + 24) % 24);
-            if(hr === 9) addGridLine(x, "LOGIN", "var(--slack-green)", grid);
-            if(hr === 13) addGridLine(x, "LUNCH", "var(--status-lunch)", grid);
-            if(hr === 17) addGridLine(x, "LOGOUT", "var(--slack-green)", grid);
-            if(hr === 22) addGridLine(x, "SNOOZE", "var(--status-snooze)", grid);
-        }
-
-        // Sun/Moon
         const sunX = ((12 - utcHr + 24) % 24) * (800/24);
         const moonX = ((24 - utcHr + 24) % 24) * (800/24);
-        const sun = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        sun.setAttribute("x", sunX); sun.setAttribute("y", 380); sun.setAttribute("font-size", "20px"); sun.textContent = "☀️";
-        const moon = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        moon.setAttribute("x", moonX); moon.setAttribute("y", 380); moon.setAttribute("font-size", "20px"); moon.textContent = "🌙";
-        grid.appendChild(sun); grid.appendChild(moon);
+        const sTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        sTxt.setAttribute("x", sunX); sTxt.setAttribute("y", 385); sTxt.textContent = "☀️"; grid.appendChild(sTxt);
+        const mTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        mTxt.setAttribute("x", moonX); mTxt.setAttribute("y", 385); mTxt.textContent = "🌙"; grid.appendChild(mTxt);
 
-        // Staggered Pins
-        const sorted = Object.values(locationData).sort((a,b) => a.lon - b.lon);
-        let lastX = -999; let lastH = 15;
-        sorted.forEach(loc => {
+        Object.values(locationData).forEach(loc => {
             const px = (loc.lon + 180) * (800/360); const py = (90 - loc.lat) * (400/180);
-            let h = (Math.abs(px - lastX) < 30) ? (lastH === 15 ? 30 : 15) : 15;
-            lastX = px; lastH = h;
-            const needle = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            needle.setAttribute("x1", px); needle.setAttribute("y1", py); needle.setAttribute("x2", px); needle.setAttribute("y2", py - h);
-            needle.setAttribute("stroke", "white"); markers.appendChild(needle);
-            const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            txt.setAttribute("x", px + 3); txt.setAttribute("y", py - h); txt.setAttribute("class", "pin-lbl");
-            txt.textContent = loc.code; markers.appendChild(txt);
+            const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            c.setAttribute("cx", px); c.setAttribute("cy", py); c.setAttribute("r", 3); c.setAttribute("fill", "white");
+            markers.appendChild(c);
+            const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            t.setAttribute("x", px + 4); t.setAttribute("y", py); t.setAttribute("class", "pin-lbl"); t.textContent = loc.code;
+            markers.appendChild(t);
         });
     }
 
-    function setFitMode(v) { 
-        const h = document.getElementById('hourVal').value || 0;
-        const m = document.getElementById('minVal').value || 0;
+    function setSim(v) {
+        if(!v) { isSim = false; render(); return; }
         const d = document.getElementById('schedDate').value;
-        if(!d) return alert("Select a date.");
-        workDate = new Date(`${d}T${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`);
-        isFitMode = v; render(); 
+        const h = document.getElementById('hourVal').value || 0;
+        if(!d) return alert("Pick a date");
+        simDate = new Date(`${d}T${h.toString().padStart(2,'0')}:00:00`);
+        isSim = true; render();
     }
-    function resetToLive() { isFitMode = false; render(); }
     loadData();
 </script>
 </body>
