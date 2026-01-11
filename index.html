@@ -38,34 +38,10 @@
         .brand-section { flex: 1.2; text-align: left; color: white; }
         .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
         
-        /* Updated Tagline styles */
-        .brand-tagline { 
-            font-size: clamp(1.2rem, 4vw, 1.8rem); 
-            line-height: 1.2; 
-            color: rgba(255,255,255,0.95); 
-            margin-top: 15px; 
-            font-weight: 400; 
-        }
-
-        /* Updated Mission styles (Smaller font, no underline) */
-        .brand-mission { 
-            font-size: clamp(0.9rem, 2.5vw, 1.1rem); /* Smaller font size */
-            line-height: 1.5; 
-            color: rgba(255,255,255,0.8); 
-            margin-top: 15px; 
-            font-weight: 400;
-            max-width: 500px; 
-        }
-
-        /* Highlights */
+        .brand-tagline { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.95); margin-top: 15px; font-weight: 400; }
+        .brand-mission { font-size: clamp(0.9rem, 2.5vw, 1.1rem); line-height: 1.5; color: rgba(255,255,255,0.8); margin-top: 15px; font-weight: 400; max-width: 500px; }
         .highlight-kindness { color: var(--slack-green); font-weight: 700; }
-        
-        /* Updated Action highlight (Color instead of underline) */
-        .highlight-action { 
-            font-weight: 700; 
-            color: var(--slack-green); /* Changed to color */
-            border-bottom: none; /* Removed underline */
-        }
+        .highlight-action { font-weight: 700; color: var(--slack-green); border-bottom: none; }
 
         .auth-card {
             flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
@@ -75,6 +51,7 @@
         .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
+        .btn-login:disabled { background: #ccc; cursor: wait; }
         .btn-signup { background: var(--slack-green); color: white; }
 
         @media (max-width: 768px) {
@@ -125,6 +102,24 @@
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
         #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
+
+        /* --- CITY SELECTION MODAL (Refined) --- */
+        #city-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3000; align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 90%; max-width: 500px; max-height: 80vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .modal-header { padding: 15px 20px; background: var(--slack-purple); color: white; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+        
+        .city-option { 
+            padding: 12px; border: 1px solid #eee; border-radius: 6px; cursor: pointer; transition: 0.2s; text-align: left; 
+            display: flex; flex-direction: column; gap: 2px;
+        }
+        .city-option:hover { background: var(--slack-bg); border-color: var(--slack-green); }
+        
+        .city-main { font-size: 1rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+        .city-sub { font-size: 0.8rem; color: #666; margin-left: 28px; } /* Indent to align with text */
+        
+        .close-modal { cursor: pointer; font-size: 1.2rem; opacity: 0.7; }
+        .close-modal:hover { opacity: 1; }
     </style>
 </head>
 <body>
@@ -153,6 +148,17 @@
     </div>
 </div>
 
+<div id="city-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>Select Specific Location</span>
+            <span class="close-modal" onclick="closeModal()">×</span>
+        </div>
+        <div class="modal-body" id="modal-list">
+            </div>
+    </div>
+</div>
+
 <div id="app-shell">
     <aside id="sidebar">
         <div class="sidebar-header">
@@ -161,7 +167,7 @@
         </div>
         <div class="mgmt-section">
             <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
-            <button class="btn-main btn-login" style="padding:10px; font-size:0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
+            <button id="addCityBtn" class="btn-main btn-login" style="padding:10px; font-size:0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
         </div>
         <div class="mgmt-section">
             <input type="text" id="newName" class="mgmt-input" placeholder="Name...">
@@ -232,34 +238,142 @@
         const { data: locs } = await _supabase.from('locations').select('*');
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
-        if(locs) locs.forEach(l => { locationData[l.name] = { code: l.code || l.name.substring(0,3).toUpperCase(), offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat }; });
+        if(locs) locs.forEach(l => { 
+            locationData[l.name] = { 
+                code: l.code || l.name.substring(0,3).toUpperCase(), 
+                offset: l.utc_offset, 
+                tz: l.tz, 
+                lon: parseFloat(l.lon), 
+                lat: parseFloat(l.lat) 
+            }; 
+        });
         team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
         populateLocDropdown(); render();
     }
 
+    // --- NEW: LOOKUP CITY WITH FLAG AND COUNTRY ---
+    let pendingCityInput = ""; 
+
     async function lookupCity() {
         const input = document.getElementById('cityInput').value.trim();
+        const btn = document.getElementById('addCityBtn');
         if (!input) return;
-        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`).then(r => r.json());
-        if (geo && geo[0]) {
-            const apiKey = 'VW4CCUCGOI2M';
-            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo[0].lat}&lng=${geo[0].lon}`).then(r => r.json());
-            if(tzR.status === 'OK') {
-                const { data: { user } } = await _supabase.auth.getUser();
-                await _supabase.from('locations').upsert({ name: geo[0].display_name.split(',')[0], code: input.substring(0,3).toUpperCase(), lon: parseFloat(geo[0].lon), lat: parseFloat(geo[0].lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id }, { onConflict: 'user_id,name' });
-                document.getElementById('cityInput').value = ''; loadData();
+        
+        pendingCityInput = input; 
+        btn.innerText = "⏳...";
+        btn.disabled = true;
+
+        try {
+            // FIX: Add addressdetails=1 to get country_code and country name
+            const geoList = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(input)}`).then(r => r.json());
+            
+            if (geoList && geoList.length > 0) {
+                if (geoList.length === 1) {
+                    confirmAndAddCity(geoList[0]);
+                } else {
+                    showCityModal(geoList);
+                }
+            } else {
+                alert("City not found.");
+                btn.innerText = "ADD OFFICE";
+                btn.disabled = false;
             }
+        } catch (e) {
+            alert("Connection error.");
+            btn.innerText = "ADD OFFICE";
+            btn.disabled = false;
         }
     }
+
+    // Helper: Convert country code to Flag Emoji
+    function getFlagEmoji(countryCode) {
+        if (!countryCode) return '🌍';
+        const codePoints = countryCode
+            .toUpperCase()
+            .split('')
+            .map(char =>  127397 + char.charCodeAt());
+        return String.fromCodePoint(...codePoints);
+    }
+
+    function showCityModal(list) {
+        const modal = document.getElementById('city-modal');
+        const listContainer = document.getElementById('modal-list');
+        listContainer.innerHTML = ''; 
+
+        list.forEach(geo => {
+            const btn = document.createElement('div');
+            btn.className = 'city-option';
+            
+            // Extract Details
+            const flag = getFlagEmoji(geo.address.country_code);
+            const city = geo.address.city || geo.address.town || geo.address.village || geo.name;
+            const country = geo.address.country || "Unknown Country";
+            const state = geo.address.state ? `${geo.address.state}, ` : "";
+
+            // Create formatted HTML
+            btn.innerHTML = `
+                <div class="city-main">${flag} ${city}</div>
+                <div class="city-sub">${state}${country}</div>
+            `;
+            
+            btn.onclick = () => {
+                confirmAndAddCity(geo);
+                closeModal();
+            };
+            listContainer.appendChild(btn);
+        });
+
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('city-modal').style.display = 'none';
+        const btn = document.getElementById('addCityBtn');
+        btn.innerText = "ADD OFFICE";
+        btn.disabled = false;
+    }
+
+    async function confirmAndAddCity(geo) {
+        const apiKey = 'VW4CCUCGOI2M';
+        const btn = document.getElementById('addCityBtn');
+        btn.innerText = "💾 Saving...";
+        
+        try {
+            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`).then(r => r.json());
+            
+            if(tzR.status === 'OK') {
+                const { data: { user } } = await _supabase.auth.getUser();
+                // Use just the city name for the display label, ensuring clean UI
+                const shortName = geo.address.city || geo.address.town || geo.address.village || geo.display_name.split(',')[0];
+                
+                await _supabase.from('locations').upsert({ 
+                    name: shortName, // Save clean name (e.g. Sydney)
+                    code: pendingCityInput.substring(0,3).toUpperCase(), 
+                    lon: parseFloat(geo.lon), 
+                    lat: parseFloat(geo.lat), 
+                    utc_offset: tzR.gmtOffset / 3600, 
+                    tz: tzR.abbreviation, 
+                    user_id: user.id 
+                }, { onConflict: 'user_id,name' });
+                
+                document.getElementById('cityInput').value = ''; 
+                loadData();
+            } else {
+                alert("Timezone not found for this location.");
+            }
+        } catch(e) { console.error(e); }
+        btn.innerText = "ADD OFFICE";
+    }
+    // ---------------------------------------------
 
     async function addMember() {
         const n = document.getElementById('newName').value.trim();
         const l = document.getElementById('newLoc').value;
-        if (n && l) {
-            const { data: { user } } = await _supabase.auth.getUser();
-            await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
-            document.getElementById('newName').value = ''; loadData();
-        }
+        if (!l) { alert("Add an Office first!"); return; }
+        if (!n) { alert("Enter name."); return; }
+        const { data: { user } } = await _supabase.auth.getUser();
+        await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
+        document.getElementById('newName').value = ''; loadData();
     }
 
     async function removeLocation(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
@@ -276,7 +390,7 @@
         const day = d.getUTCDay();
         if (day === 0 || day === 6) return { color: "var(--status-weekend)", isRed: true, isWork: false, isBlue: false };
         if (hr >= 22 || hr < 7) return { color: "var(--status-snooze)", isRed: true, isWork: false, isBlue: false };
-        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", isRed: false, isWork: true, isBlue: false };
+        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", isRed: false, isWork: false, isBlue: false };
         if (hr >= 9 && hr < 17) return { color: "var(--slack-green)", isRed: false, isWork: true, isBlue: false };
         return { color: "var(--slack-blue)", isRed: false, isWork: false, isBlue: true };
     }
@@ -395,6 +509,15 @@
     function render() {
         const refMS = isFitMode ? workDateUTC_MS : (Date.now() + (new Date().getTimezoneOffset()*60000));
         const container = document.getElementById('member-groups'); container.innerHTML = '';
+        
+        // --- EMPTY STATE ---
+        if (Object.keys(locationData).length === 0) {
+            container.innerHTML = `<div style="padding:40px 20px; text-align:center; opacity:0.6;"><div style="font-size:30px; margin-bottom:10px;">👇</div><p style="font-weight:700;">It's lonely here!</p><p>Add your current city in the box above to start.</p></div>`;
+            document.getElementById('day-night-layer').innerHTML = '';
+            document.getElementById('grid-label-layer').innerHTML = '';
+            return;
+        }
+
         const groups = {};
         Object.keys(locationData).forEach(name => { const label = locationData[name].tz || "UTC"; if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] }; groups[label].cities.push(name); });
         Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
@@ -447,7 +570,10 @@
         const moon = document.createElementNS("http://www.w3.org/2000/svg", "text"); moon.setAttribute("x", moonX - 10); moon.setAttribute("y", 350); moon.setAttribute("font-size", "25"); moon.textContent = "🌙";
         markers.appendChild(sun); markers.appendChild(moon);
         Object.values(locationData).forEach(d => {
-            const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
+            const lon = parseFloat(d.lon);
+            const lat = parseFloat(d.lat);
+            const px = (lon + 180) * 2.222; 
+            const py = (90 - lat) * 2.222;
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); dot.setAttribute("stroke-width", "1"); markers.appendChild(dot);
             const t = document.createElementNS("http://www.w3.org/2000/svg", "text"); t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl"); t.textContent = d.code; markers.appendChild(t);
         });
@@ -465,7 +591,9 @@
     }
     function resetToLive() { isFitMode = false; toggleView('map'); render(); }
     function copySlackMsg() { navigator.clipboard.writeText(document.getElementById('slack-msg').innerText); alert("Copied to clipboard!"); }
+    
     checkSession();
+    document.getElementById('schedDate').valueAsDate = new Date();
 </script>
 </body>
 </html>
