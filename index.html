@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loom | Precision Scheduling</title>
+    <title>Orbit | Precision Scheduling</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -15,7 +15,7 @@
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
 
-        /* --- RESTORED HERO AUTH DESIGN --- */
+        /* --- FIXED AUTH OVERLAY CSS --- */
         #auth-overlay {
             position: fixed; inset: 0; 
             background: var(--loom-gradient);
@@ -29,6 +29,7 @@
             animation: drift 100s linear infinite;
         }
         @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
         .hero-container {
             display: flex; width: 100%; max-width: 1100px;
             align-items: center; justify-content: space-between; gap: 40px;
@@ -36,7 +37,36 @@
         }
         .brand-section { flex: 1.2; text-align: left; color: white; }
         .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
-        .brand-section p { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.9); margin-top: 20px; font-weight: 400; }
+        
+        /* Updated Tagline styles */
+        .brand-tagline { 
+            font-size: clamp(1.2rem, 4vw, 1.8rem); 
+            line-height: 1.2; 
+            color: rgba(255,255,255,0.95); 
+            margin-top: 15px; 
+            font-weight: 400; 
+        }
+
+        /* Updated Mission styles (Smaller font, no underline) */
+        .brand-mission { 
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem); /* Smaller font size */
+            line-height: 1.5; 
+            color: rgba(255,255,255,0.8); 
+            margin-top: 15px; 
+            font-weight: 400;
+            max-width: 500px; 
+        }
+
+        /* Highlights */
+        .highlight-kindness { color: var(--slack-green); font-weight: 700; }
+        
+        /* Updated Action highlight (Color instead of underline) */
+        .highlight-action { 
+            font-weight: 700; 
+            color: var(--slack-green); /* Changed to color */
+            border-bottom: none; /* Removed underline */
+        }
+
         .auth-card {
             flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -46,6 +76,12 @@
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
         .btn-signup { background: var(--slack-green); color: white; }
+
+        @media (max-width: 768px) {
+            .hero-container { flex-direction: column; text-align: center; gap: 30px; }
+            .brand-section { text-align: center; display: flex; flex-direction: column; align-items: center; }
+            .brand-section h1 { font-size: 4rem; }
+        }
 
         /* --- APP SHELL STYLES --- */
         #app-shell { display: flex; height: 100%; width: 100%; }
@@ -99,10 +135,10 @@
         <div class="brand-section">
             <div class="brand-logo-area">
                 <h1>orbit</h1>
-                <p class="brand-tagline">Connect Globally with <span class="highlight-kindness">Kindness</span></p>
+                <p class="brand-tagline">Connecting Global Teams with <span class="highlight-kindness">Kindness</span></p>
             </div>
             <p class="brand-mission">
-                <span class="highlight-action">Curate</span> the perfect <span class="highlight-action">time</span> to connect with your global teammates mindful of their rest and life
+                <span class="highlight-action">Curate</span> the right <span class="highlight-action">time</span> to connect mindful of everyone's rest and life.
             </p>
         </div>
         <div class="auth-card">
@@ -120,7 +156,7 @@
 <div id="app-shell">
     <aside id="sidebar">
         <div class="sidebar-header">
-            <h2>LOOM</h2>
+            <h2>ORBIT</h2>
             <span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
         </div>
         <div class="mgmt-section">
