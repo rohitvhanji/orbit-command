@@ -71,18 +71,30 @@
         .recommendation-panel { background: #F9F9FB; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
         .rec-btn { background: white; border: 1px solid var(--slack-border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; }
         .slack-copy-box { background: #f4f4f4; padding: 15px; border-radius: 6px; border: 1px dashed #ccc; font-family: monospace; font-size: 0.8rem; margin-top: 30px; position: relative; white-space: pre-line; }
-        .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
+        
+        /* Chart Styles */
+        .timezone-row-container { margin-bottom: 15px; }
+        .local-time-row { display: flex; margin-left: 140px; gap: 2px; margin-bottom: 2px; }
+        .time-tick { flex: 1; font-size: 0.65rem; text-align: center; color: #888; font-weight: 700; }
+        
+        .chart-row { display: flex; align-items: center; }
         .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
         .chart-grid { flex-grow: 1; display: flex; gap: 2px; }
         .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
         .match-row .chart-box { cursor: pointer; border: 1px solid rgba(0,0,0,0.03); }
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
-        .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
-        .chart-tick { flex: 1; font-size: 0.5rem; text-align: center; color: #aaa; font-weight: 900; }
+        
         .grid-line { stroke: rgba(0, 0, 0, 0.6); stroke-width: 1.5px; }
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; paint-order: stroke; stroke: black; stroke-width: 3px; }
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
         #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
+
+        /* --- FILTER BAR STYLES --- */
+        .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        .filter-pill { padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .filter-pill.active { background: var(--slack-purple); color: white; border-color: var(--slack-purple); }
+        .filter-pill.inactive { background: white; color: #888; border: 1px solid #ccc; opacity: 0.6; }
+        .filter-pill:hover { transform: translateY(-1px); }
 
         /* --- CITY SELECTION MODAL --- */
         #city-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3000; align-items: center; justify-content: center; }
@@ -166,7 +178,9 @@
                     </div>
                     <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
                 </div>
-                <div class="recommendation-panel"><span style="font-size:0.8rem; font-weight:900; color:var(--slack-navy);">TOP RECO SLOTS:</span><div id="rec-slots" style="display:flex; gap:10px;"></div></div>
+                
+                <div id="tz-filter-bar" class="filter-bar"></div>
+
                 <div id="chart-body"></div>
                 <div class="slack-copy-box"><strong>RECO MESSAGE:</strong><br><div id="slack-msg" style="margin-top:10px; color:#333;">Select a date...</div><button onclick="copySlackMsg()" style="position:absolute; right:10px; top:10px; font-size:0.6rem; cursor:pointer;">COPY</button></div>
             </div>
@@ -360,12 +374,21 @@
     }
 
     function evaluateMatch(utcMS) {
-        const activeTzs = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
-        if(!activeTzs.length) return { color: "var(--status-weekend)", isRed: true };
+        // --- FIX: USE UNIQUE GROUPS (TZ+OFFSET) for MATCH LOGIC ---
+        const uniqueGroups = new Set();
+        Object.values(locationData).forEach(l => {
+            const key = `${l.tz}_${l.offset}`;
+            if (!chartExclusions.has(key)) uniqueGroups.add(key);
+        });
+        const activeGroups = Array.from(uniqueGroups);
+        
+        if(!activeGroups.length) return { color: "var(--status-weekend)", isRed: true };
 
-        let redFound = false, greenCount = 0, blueCount = 0, totalCount = activeTzs.length;
-        for (const tzName of activeTzs) {
-            const loc = Object.values(locationData).find(l => l.tz === tzName);
+        let redFound = false, greenCount = 0, blueCount = 0, totalCount = activeGroups.length;
+        
+        for (const groupKey of activeGroups) {
+            // Find ANY location that matches this group key to get offset
+            const loc = Object.values(locationData).find(l => `${l.tz}_${l.offset}` === groupKey);
             const s = getStatus(utcMS + (loc.offset * 3600000));
             if (s.isRed) { redFound = true; break; }
             if (s.isWork) greenCount++;
@@ -381,34 +404,75 @@
         const dS = document.getElementById('schedDate').value;
         if(!dS) return;
         const body = document.getElementById('chart-body');
-        const recSlots = document.getElementById('rec-slots');
-        body.innerHTML = ''; recSlots.innerHTML = '';
+        
+        // --- 1. GROUP LOCATIONS BY TZ+OFFSET ---
+        const groups = {};
+        Object.values(locationData).forEach(l => {
+            const key = `${l.tz}_${l.offset}`;
+            if (!groups[key]) groups[key] = l;
+        });
+        const allGroupKeys = Object.keys(groups);
 
-        const allTzNames = [...new Set(Object.values(locationData).map(l => l.tz))];
+        // --- 2. BUILD FILTER BAR ---
+        const filterBar = document.getElementById('tz-filter-bar');
+        filterBar.innerHTML = '';
+        
+        allGroupKeys.forEach(key => {
+            const l = groups[key];
+            const isOff = chartExclusions.has(key);
+            const btn = document.createElement('div');
+            btn.className = isOff ? 'filter-pill inactive' : 'filter-pill active';
+            // Label: "PST (+8)" to distinguish duplicates
+            const label = `${l.tz} (${l.offset >= 0 ? '+' : ''}${l.offset})`;
+            btn.innerText = (isOff ? '○ ' : '◉ ') + label;
+            btn.onclick = () => toggleEx(key);
+            filterBar.appendChild(btn);
+        });
+
+        body.innerHTML = ''; 
+
         const dur = document.getElementById('durVal').value;
         let count = 24, stepMs = 60 * 60000;
         if(dur === "30") { count = 48; stepMs = 30 * 60000; }
         if(dur === "90") { count = 16; stepMs = 90 * 60000; }
 
-        let timeline = `<div class="chart-timeline">`;
-        for(let i=0; i<24; i+=2) timeline += `<div class="chart-tick">${i}:00</div>`;
-        body.innerHTML += timeline + `</div>`;
-
         const istMidnightInUTC = new Date(dS + "T00:00:00Z").getTime() - (MY_OFFSET * 3600000);
 
-        allTzNames.forEach(tzName => {
-            const loc = Object.values(locationData).find(l => l.tz === tzName);
-            const isExcluded = chartExclusions.has(tzName);
-            let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${tzName}')"> <span>${tzName}</span></div><div class="chart-grid" style="visibility: ${isExcluded ? 'hidden' : 'visible'}">`;
+        allGroupKeys.forEach(key => {
+            if (chartExclusions.has(key)) return; // SKIP IF EXCLUDED
+
+            const loc = groups[key];
+            const label = `${loc.tz} (${loc.offset >= 0 ? '+' : ''}${loc.offset})`; // Display label with offset
+
+            let tzContainer = `<div class="timezone-row-container">`;
+            
+            // Local Timeline per row
+            let timeRow = `<div class="local-time-row">`;
+            for(let i=0; i<count; i++){
+                const slotUTC = istMidnightInUTC + (i * stepMs);
+                const localDate = new Date(slotUTC + (loc.offset * 3600000));
+                let h = localDate.getUTCHours();
+                if (dur === "30" && i % 2 !== 0) h = ""; 
+                timeRow += `<div class="time-tick">${h}</div>`;
+            }
+            timeRow += `</div>`;
+
+            let dataRow = `<div class="chart-row">
+                <div class="chart-label"><span>${label}</span></div>
+                <div class="chart-grid">`;
+            
             for(let i=0; i<count; i++){
                 const slotUTC = istMidnightInUTC + (i * stepMs);
                 const status = getStatus(slotUTC + (loc.offset * 3600000));
-                row += `<div class="chart-box" style="background:#f4f4f4; border:1px solid #e0e0e0; font-size:0.8rem;">${status.emoji}</div>`;
+                dataRow += `<div class="chart-box" style="background:#f4f4f4; border:1px solid #e0e0e0; font-size:0.8rem;">${status.emoji}</div>`;
             }
-            body.innerHTML += row + `</div></div>`;
+            dataRow += `</div></div>`;
+
+            tzContainer += timeRow + dataRow + `</div>`;
+            body.innerHTML += tzContainer;
         });
 
-        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px;"><div class="chart-label" style="color:var(--slack-green); font-weight:900;">MATCH</div><div class="chart-grid" id="m-grid"></div></div>`;
+        body.innerHTML += `<div class="chart-row match-row" style="margin-top:20px; padding-top:10px; border-top:2px solid #eee;"><div class="chart-label" style="color:var(--slack-green); font-weight:900;">MATCH</div><div class="chart-grid" id="m-grid"></div></div>`;
         
         const results = [];
         const g = document.getElementById('m-grid');
@@ -432,27 +496,22 @@
             return b.blueCount - a.blueCount;
         }).slice(0, 3);
 
-        sortedRecs.forEach(r => {
-            const btn = document.createElement('button'); btn.className = 'rec-btn';
-            btn.innerText = `${r.h.toString().padStart(2,'0')}:${r.m.toString().padStart(2,'0')}`;
-            btn.onclick = () => syncAndRender(r.utc, r.h, r.m);
-            recSlots.appendChild(btn);
-        });
-
         const dDate = new Date(dS + "T12:00:00Z");
         const dStr = dDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         
         if(sortedRecs.length > 0) {
             let msg = `Hey Team! 🌍 For our meeting on *${dStr}*, here are the best slots:\n\n`;
-            const activeTzList = [...new Set(Object.values(locationData).filter(l => !chartExclusions.has(l.tz)).map(l => l.tz))];
+            // Get Active Groups for Message
+            const activeGroups = allGroupKeys.filter(k => !chartExclusions.has(k)).map(k => groups[k]);
+            
             sortedRecs.forEach((s, idx) => {
                 const icon = s.isGreen ? "🟢" : "🟡";
                 msg += `*Slot ${idx+1}:*\n${icon} `;
                 const localTimes = [];
-                activeTzList.forEach(tzK => {
-                    const loc = Object.values(locationData).find(l => l.tz === tzK);
+                activeGroups.forEach(loc => {
                     const lTime = new Date(s.utc + (loc.offset * 3600000));
-                    localTimes.push(`${lTime.getUTCHours().toString().padStart(2,'0')}:${lTime.getUTCMinutes().toString().padStart(2,'0')} ${loc.tz}`);
+                    const label = `${loc.tz} (${loc.offset >= 0 ? '+' : ''}${loc.offset})`;
+                    localTimes.push(`${lTime.getUTCHours().toString().padStart(2,'0')}:${lTime.getUTCMinutes().toString().padStart(2,'0')} ${label}`);
                 });
                 msg += localTimes.join(' | ') + `\n\n`;
             });
@@ -469,7 +528,6 @@
         const refMS = isFitMode ? workDateUTC_MS : Date.now();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         
-        // --- EMPTY STATE ---
         if (Object.keys(locationData).length === 0) {
             container.innerHTML = `<div style="padding:40px 20px; text-align:center; opacity:0.6;"><div style="font-size:30px; margin-bottom:10px;">👇</div><p style="font-weight:700;">It's lonely here!</p><p>Add your current city in the box above to start.</p></div>`;
             document.getElementById('day-night-layer').innerHTML = '';
@@ -478,19 +536,33 @@
         }
 
         const groups = {};
-        Object.keys(locationData).forEach(name => { const label = locationData[name].tz || "UTC"; if(!groups[label]) groups[label] = { offset: locationData[name].offset, cities: [] }; groups[label].cities.push(name); });
-        Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(tzK => {
-            const g = groups[tzK];
+        Object.keys(locationData).forEach(name => { 
+            const d = locationData[name];
+            // FIX: Group by unique TZ+Offset to prevent collisions
+            const groupKey = `${d.tz}_${d.offset}`; 
+            
+            if(!groups[groupKey]) {
+                groups[groupKey] = { 
+                    label: d.tz, 
+                    offset: d.offset, 
+                    cities: [] 
+                };
+            }
+            groups[groupKey].cities.push(name);
+        });
+
+        Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(key => {
+            const g = groups[key];
             const local = new Date(refMS + (g.offset * 3600000));
             const tS = local.getUTCHours().toString().padStart(2,'0') + ":" + local.getUTCMinutes().toString().padStart(2,'0');
-            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${tS}</span></div>`;
+            // Sidebar Header with Offset
+            let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${g.label} (${g.offset >= 0 ? '+' : ''}${g.offset})</span><span>${tS}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
                 const shortName = loc.split(',')[0];
                 tzHtml += `<div class="location-card"><div class="loc-header"><span>${shortName}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
                     const s = getStatus(refMS + (locationData[loc].offset * 3600000)); 
-                    // Use the same emoji logic for sidebar status
                     tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${s.emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
@@ -532,14 +604,14 @@
         Object.values(locationData).forEach(d => {
             const lon = parseFloat(d.lon);
             const lat = parseFloat(d.lat);
-            const px = (lon + 180) * 2.222; 
+            const px = (lon + 180) * 2.222; 
             const py = (90 - lat) * 2.222;
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); dot.setAttribute("stroke-width", "1"); markers.appendChild(dot);
             const t = document.createElementNS("http://www.w3.org/2000/svg", "text"); t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl"); t.textContent = d.code; markers.appendChild(t);
         });
     }
 
-    function setFitMode(v) { 
+    function setFitMode(v) { 
         toggleView('map');
         const h = parseInt(document.getElementById('hourVal').value) || 0;
         const m = parseInt(document.getElementById('minVal').value) || 0;
@@ -547,7 +619,7 @@
         if(!d) return alert("Select a date.");
         const localUTC_MS = new Date(d + "T" + h.toString().padStart(2,'0') + ":" + m.toString().padStart(2,'0') + ":00Z").getTime();
         workDateUTC_MS = localUTC_MS - (MY_OFFSET * 3600000);
-        isFitMode = v; render(); 
+        isFitMode = v; render(); 
     }
     function resetToLive() { isFitMode = false; toggleView('map'); render(); }
     function copySlackMsg() { navigator.clipboard.writeText(document.getElementById('slack-msg').innerText); alert("Copied to clipboard!"); }
