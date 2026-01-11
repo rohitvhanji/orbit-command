@@ -16,38 +16,19 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
 
         /* --- FIXED AUTH OVERLAY CSS --- */
-        #auth-overlay {
-            position: fixed; inset: 0; 
-            background: var(--loom-gradient);
-            z-index: 2000; display: flex; align-items: center; justify-content: center;
-            padding: 20px; overflow-y: auto;
-        }
-        .bg-mesh {
-            position: absolute; width: 150%; height: 150%;
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg');
-            background-size: cover; opacity: 0.05; filter: invert(1);
-            animation: drift 100s linear infinite;
-        }
+        #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+        .bg-mesh { position: absolute; width: 150%; height: 150%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: cover; opacity: 0.05; filter: invert(1); animation: drift 100s linear infinite; }
         @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
-        .hero-container {
-            display: flex; width: 100%; max-width: 1100px;
-            align-items: center; justify-content: space-between; gap: 40px;
-            position: relative; z-index: 2;
-        }
+        .hero-container { display: flex; width: 100%; max-width: 1100px; align-items: center; justify-content: space-between; gap: 40px; position: relative; z-index: 2; }
         .brand-section { flex: 1.2; text-align: left; color: white; }
         .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
-        
         .brand-tagline { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.95); margin-top: 15px; font-weight: 400; }
         .brand-mission { font-size: clamp(0.9rem, 2.5vw, 1.1rem); line-height: 1.5; color: rgba(255,255,255,0.8); margin-top: 15px; font-weight: 400; max-width: 500px; }
         .highlight-kindness { color: var(--slack-green); font-weight: 700; }
         .highlight-action { font-weight: 700; color: var(--slack-green); border-bottom: none; }
 
-        .auth-card {
-            flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px;
-        }
+        .auth-card { flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
         .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
@@ -93,7 +74,7 @@
         .chart-row { display: flex; align-items: center; margin-bottom: 10px; }
         .chart-label { width: 140px; font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
         .chart-grid { flex-grow: 1; display: flex; gap: 2px; }
-        .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; }
+        .chart-box { flex: 1; height: 35px; border-radius: 3px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
         .match-row .chart-box { cursor: pointer; border: 1px solid rgba(0,0,0,0.03); }
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 5; border: 1px solid var(--slack-purple); }
         .chart-timeline { display: flex; margin-left: 140px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
@@ -103,21 +84,15 @@
         .pin-lbl { font-size: 9px; font-weight: 800; fill: var(--slack-navy); paint-order: stroke; stroke: white; stroke-width: 2px; }
         #scheduler { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--slack-border); display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 1000; }
 
-        /* --- CITY SELECTION MODAL (Refined) --- */
+        /* --- CITY SELECTION MODAL --- */
         #city-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3000; align-items: center; justify-content: center; }
         .modal-content { background: white; width: 90%; max-width: 500px; max-height: 80vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
         .modal-header { padding: 15px 20px; background: var(--slack-purple); color: white; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-        
-        .city-option { 
-            padding: 12px; border: 1px solid #eee; border-radius: 6px; cursor: pointer; transition: 0.2s; text-align: left; 
-            display: flex; flex-direction: column; gap: 2px;
-        }
+        .city-option { padding: 12px; border: 1px solid #eee; border-radius: 6px; cursor: pointer; transition: 0.2s; text-align: left; display: flex; flex-direction: column; gap: 2px; }
         .city-option:hover { background: var(--slack-bg); border-color: var(--slack-green); }
-        
         .city-main { font-size: 1rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
-        .city-sub { font-size: 0.8rem; color: #666; margin-left: 28px; } /* Indent to align with text */
-        
+        .city-sub { font-size: 0.8rem; color: #666; margin-left: 28px; }
         .close-modal { cursor: pointer; font-size: 1.2rem; opacity: 0.7; }
         .close-modal:hover { opacity: 1; }
     </style>
@@ -154,8 +129,7 @@
             <span>Select Specific Location</span>
             <span class="close-modal" onclick="closeModal()">×</span>
         </div>
-        <div class="modal-body" id="modal-list">
-            </div>
+        <div class="modal-body" id="modal-list"></div>
     </div>
 </div>
 
@@ -251,7 +225,6 @@
         populateLocDropdown(); render();
     }
 
-    // --- NEW: LOOKUP CITY WITH FLAG AND COUNTRY ---
     let pendingCityInput = ""; 
 
     async function lookupCity() {
@@ -264,7 +237,6 @@
         btn.disabled = true;
 
         try {
-            // FIX: Add addressdetails=1 to get country_code and country name
             const geoList = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(input)}`).then(r => r.json());
             
             if (geoList && geoList.length > 0) {
@@ -285,13 +257,9 @@
         }
     }
 
-    // Helper: Convert country code to Flag Emoji
     function getFlagEmoji(countryCode) {
         if (!countryCode) return '🌍';
-        const codePoints = countryCode
-            .toUpperCase()
-            .split('')
-            .map(char =>  127397 + char.charCodeAt());
+        const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
         return String.fromCodePoint(...codePoints);
     }
 
@@ -304,25 +272,15 @@
             const btn = document.createElement('div');
             btn.className = 'city-option';
             
-            // Extract Details
             const flag = getFlagEmoji(geo.address.country_code);
             const city = geo.address.city || geo.address.town || geo.address.village || geo.name;
             const country = geo.address.country || "Unknown Country";
             const state = geo.address.state ? `${geo.address.state}, ` : "";
 
-            // Create formatted HTML
-            btn.innerHTML = `
-                <div class="city-main">${flag} ${city}</div>
-                <div class="city-sub">${state}${country}</div>
-            `;
-            
-            btn.onclick = () => {
-                confirmAndAddCity(geo);
-                closeModal();
-            };
+            btn.innerHTML = `<div class="city-main">${flag} ${city}</div><div class="city-sub">${state}${country}</div>`;
+            btn.onclick = () => { confirmAndAddCity(geo); closeModal(); };
             listContainer.appendChild(btn);
         });
-
         modal.style.display = 'flex';
     }
 
@@ -343,11 +301,10 @@
             
             if(tzR.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
-                // Use just the city name for the display label, ensuring clean UI
                 const shortName = geo.address.city || geo.address.town || geo.address.village || geo.display_name.split(',')[0];
                 
                 await _supabase.from('locations').upsert({ 
-                    name: shortName, // Save clean name (e.g. Sydney)
+                    name: shortName, 
                     code: pendingCityInput.substring(0,3).toUpperCase(), 
                     lon: parseFloat(geo.lon), 
                     lat: parseFloat(geo.lat), 
@@ -364,13 +321,12 @@
         } catch(e) { console.error(e); }
         btn.innerText = "ADD OFFICE";
     }
-    // ---------------------------------------------
 
     async function addMember() {
         const n = document.getElementById('newName').value.trim();
         const l = document.getElementById('newLoc').value;
-        if (!l) { alert("Add an Office first!"); return; }
-        if (!n) { alert("Enter name."); return; }
+        if (!l) { alert("Please add an Office Location first!"); document.getElementById('cityInput').focus(); return; }
+        if (!n) { alert("Please enter a name."); return; }
         const { data: { user } } = await _supabase.auth.getUser();
         await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
         document.getElementById('newName').value = ''; loadData();
@@ -381,18 +337,20 @@
 
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc'); sel.innerHTML = '';
-        Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; sel.appendChild(opt); });
+        Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l.split(',')[0]; sel.appendChild(opt); });
     }
 
     function getStatus(utcMS) {
         const d = new Date(utcMS);
         const hr = d.getUTCHours();
         const day = d.getUTCDay();
-        if (day === 0 || day === 6) return { color: "var(--status-weekend)", isRed: true, isWork: false, isBlue: false };
-        if (hr >= 22 || hr < 7) return { color: "var(--status-snooze)", isRed: true, isWork: false, isBlue: false };
-        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", isRed: false, isWork: false, isBlue: false };
-        if (hr >= 9 && hr < 17) return { color: "var(--slack-green)", isRed: false, isWork: true, isBlue: false };
-        return { color: "var(--slack-blue)", isRed: false, isWork: false, isBlue: true };
+        if (day === 0 || day === 6) return { color: "var(--status-weekend)", emoji: "🏖️", isRed: true, isWork: false, isBlue: false };
+        if (hr >= 22 || hr < 7) return { color: "var(--status-snooze)", emoji: "😴", isRed: true, isWork: false, isBlue: false };
+        // --- UPDATED EMOJI FOR LUNCH ---
+        if (hr >= 13 && hr < 14) return { color: "var(--status-lunch)", emoji: "🍽️", isRed: false, isWork: false, isBlue: false };
+        // -------------------------------
+        if (hr >= 9 && hr < 17) return { color: "var(--slack-green)", emoji: "💻", isRed: false, isWork: true, isBlue: false };
+        return { color: "var(--slack-blue)", emoji: "🏠", isRed: false, isWork: false, isBlue: true };
     }
 
     function toggleView(v) {
@@ -444,7 +402,8 @@
             let row = `<div class="chart-row"><div class="chart-label"><input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleEx('${tzName}')"> <span>${tzName}</span></div><div class="chart-grid" style="visibility: ${isExcluded ? 'hidden' : 'visible'}">`;
             for(let i=0; i<count; i++){
                 const slotUTC = istMidnightInUTC + (i * stepMs);
-                row += `<div class="chart-box" style="background:${getStatus(slotUTC + (loc.offset * 3600000)).color}"></div>`;
+                const status = getStatus(slotUTC + (loc.offset * 3600000));
+                row += `<div class="chart-box" style="background:#f4f4f4; border:1px solid #e0e0e0; font-size:0.8rem;">${status.emoji}</div>`;
             }
             body.innerHTML += row + `</div></div>`;
         });
@@ -507,7 +466,7 @@
     function syncAndRender(utcMS, h, m) { workDateUTC_MS = utcMS; isFitMode = true; document.getElementById('hourVal').value = h; document.getElementById('minVal').value = m == 30 ? "30" : "00"; render(); }
 
     function render() {
-        const refMS = isFitMode ? workDateUTC_MS : (Date.now() + (new Date().getTimezoneOffset()*60000));
+        const refMS = isFitMode ? workDateUTC_MS : Date.now();
         const container = document.getElementById('member-groups'); container.innerHTML = '';
         
         // --- EMPTY STATE ---
@@ -527,11 +486,12 @@
             let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${tzK}</span><span>${tS}</span></div>`;
             g.cities.forEach(loc => {
                 const mates = team.filter(m => m.loc === loc);
-                tzHtml += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
+                const shortName = loc.split(',')[0];
+                tzHtml += `<div class="location-card"><div class="loc-header"><span>${shortName}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`;
                 mates.forEach(m => { 
                     const s = getStatus(refMS + (locationData[loc].offset * 3600000)); 
-                    const emoji = s.color === "var(--status-weekend)" ? "🏖️" : s.isRed ? "😴" : s.color === "var(--status-lunch)" ? "🍱" : s.isWork ? "💻" : "🏠";
-                    tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
+                    // Use the same emoji logic for sidebar status
+                    tzHtml += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${s.emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
                 });
                 tzHtml += `</div>`;
             });
@@ -572,14 +532,14 @@
         Object.values(locationData).forEach(d => {
             const lon = parseFloat(d.lon);
             const lat = parseFloat(d.lat);
-            const px = (lon + 180) * 2.222; 
+            const px = (lon + 180) * 2.222; 
             const py = (90 - lat) * 2.222;
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); dot.setAttribute("stroke-width", "1"); markers.appendChild(dot);
             const t = document.createElementNS("http://www.w3.org/2000/svg", "text"); t.setAttribute("x", px + 8); t.setAttribute("y", py + 3); t.setAttribute("class", "pin-lbl"); t.textContent = d.code; markers.appendChild(t);
         });
     }
 
-    function setFitMode(v) { 
+    function setFitMode(v) { 
         toggleView('map');
         const h = parseInt(document.getElementById('hourVal').value) || 0;
         const m = parseInt(document.getElementById('minVal').value) || 0;
@@ -587,7 +547,7 @@
         if(!d) return alert("Select a date.");
         const localUTC_MS = new Date(d + "T" + h.toString().padStart(2,'0') + ":" + m.toString().padStart(2,'0') + ":00Z").getTime();
         workDateUTC_MS = localUTC_MS - (MY_OFFSET * 3600000);
-        isFitMode = v; render(); 
+        isFitMode = v; render(); 
     }
     function resetToLive() { isFitMode = false; toggleView('map'); render(); }
     function copySlackMsg() { navigator.clipboard.writeText(document.getElementById('slack-msg').innerText); alert("Copied to clipboard!"); }
