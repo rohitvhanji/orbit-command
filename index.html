@@ -266,7 +266,7 @@
             if(locs) locs.forEach(l => { 
                 locationData[l.name] = { code: l.code, offset: l.utc_offset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat) }; 
                 const key = `${l.tz}_${l.utc_offset}`;
-                // NO DEFAULT SET HERE - Defaults handled in calc logic
+                if(!tzPreferences[key]) tzPreferences[key] = new Set(); // DEFAULT IS EMPTY = STANDARD 9-5
             });
             team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
             populateLocDropdown(); populateTzDropdown(); render();
@@ -310,6 +310,8 @@
                     name: geo.display_name.split(',')[0], code: geo.display_name.substring(0,3).toUpperCase(), 
                     lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id 
                 });
+                const key = `${tzR.abbreviation}_${tzR.gmtOffset/3600}`;
+                if(!tzPreferences[key]) tzPreferences[key] = new Set();
                 loadData();
             }
         } catch(e) {}
@@ -372,9 +374,7 @@
             const loc = Object.values(locationData).find(l => `${l.tz}_${l.offset}` === groupKey);
             const dLocal = new Date(startUTC + (loc.offset * 3600000));
             const tVal = dLocal.getUTCHours() + (dLocal.getUTCMinutes()/60);
-            
-            // --- FIX 1: DEFAULT TO STD IF EMPTY ---
-            const prefs = (tzPreferences[groupKey] && tzPreferences[groupKey].size > 0) ? tzPreferences[groupKey] : new Set(['std']);
+            const prefs = tzPreferences[groupKey] || new Set();
             
             let isUserGreen = false;
             let isUserRed = false;
@@ -392,8 +392,9 @@
             else {
                 if (tVal >= 22.5 || tVal < 7) isUserRed = true;
                 if (!isUserRed) {
-                    // Standard Work: 9-17 (Continuous)
-                    if (prefs.has('std') && tVal >= 9 && tVal < 17) isUserGreen = true;
+                    // IMPLICIT 9-17 (INCLUDES LUNCH)
+                    if (tVal >= 9 && tVal < 17) isUserGreen = true; 
+
                     if (prefs.has('early') && tVal >= 7 && tVal < 9) isUserGreen = true;
                     if (prefs.has('night') && tVal >= 17 && tVal < 22.5) isUserGreen = true;
                 }
@@ -434,9 +435,12 @@
             <div class="rec-list"></div>`;
         
         const list = card.querySelector('.rec-list');
-        const activeGroups = [...new Set(Object.values(locationData).map(l => `${l.tz}_${l.offset}`))].filter(k => !chartExclusions.has(k));
-        activeGroups.forEach(k => {
-            const loc = Object.values(locationData).find(l => `${l.tz}_${l.offset}` === k);
+        const groups = {};
+        Object.values(locationData).forEach(l => { const key = `${l.tz}_${l.offset}`; if (!groups[key]) groups[key] = l; });
+        const allGroupKeys = Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset);
+        const activeGroups = allGroupKeys.filter(k => !chartExclusions.has(k)).map(k => groups[k]);
+
+        activeGroups.forEach(loc => {
             const lt = new Date(s.utc + (loc.offset * 3600000));
             list.innerHTML += `<div class="rec-row"><span>${loc.tz}</span><span>${lt.getUTCHours()}:${lt.getUTCMinutes().toString().padStart(2,'0')}</span></div>`;
         });
@@ -455,7 +459,6 @@
         
         const groups = {};
         Object.values(locationData).forEach(l => { const key = `${l.tz}_${l.offset}`; if (!groups[key]) groups[key] = l; });
-        // --- RESTORED SORTING ---
         const allGroupKeys = Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset);
 
         const filterBar = document.getElementById('tz-filter-bar');
@@ -473,9 +476,10 @@
 
         body.innerHTML = ''; 
         const durVal = document.getElementById('durVal').value;
-        // --- RESTORED DURATION LOGIC ---
-        const stepMs = parseInt(durVal) * 60000;
-        const count = (24 * 60) / parseInt(durVal); // e.g. 48 for 30min
+        const durationMinutes = parseInt(durVal);
+        let count = 24, stepMs = 60 * 60000;
+        if(durVal === "30") { count = 48; stepMs = 30 * 60000; }
+        if(durVal === "90") { count = 16; stepMs = 90 * 60000; }
 
         const refVal = document.getElementById('inputTz').value;
         let startUTC_MS;
@@ -496,9 +500,8 @@
             if (chartExclusions.has(key)) return; 
             const loc = groups[key];
             const label = `${loc.tz} (${loc.offset >= 0 ? '+' : ''}${loc.offset})`; 
-            
-            // --- FIX 1: DEFAULT TO STD IF EMPTY ---
-            const prefs = (tzPreferences[key] && tzPreferences[key].size > 0) ? tzPreferences[key] : new Set(['std']);
+            if(!tzPreferences[key]) tzPreferences[key] = new Set(); // DEFAULT EMPTY
+            const prefs = tzPreferences[key];
 
             let tzContainer = `<div class="timezone-row-container">`;
             let timeRow = `<div class="local-time-row">`;
@@ -511,10 +514,9 @@
             }
             timeRow += `</div>`;
 
-            // REMOVED LUNCH PILL
+            // ONLY 3 TOGGLES
             let pillHtml = `<div class="pref-group">
                 <div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')" title="Early: 07:00-09:00">🌅</div>
-                <div class="pref-pill ${prefs.has('std')?'active':''}" onclick="togglePreference('${key}', 'std')" title="Work Shift: 09:00-17:00">🍵</div>
                 <div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')" title="Night: 17:00-22:30">🦉</div>
                 <div class="pref-pill ${prefs.has('global')?'global-active':''}" style="margin-left:5px;" onclick="togglePreference('${key}', 'global')" title="Global Flex: 06:00-00:00">🌍</div>
             </div>`;
@@ -531,14 +533,14 @@
                 let isGreen = false;
                 const day = localDate.getUTCDay();
 
-                // VISUAL LOGIC TO MATCH CALC LOGIC
+                // VISUAL LOGIC
                 if (day === 0 || day === 6) {
                     isGreen = false; 
                 } else if(prefs.has('global')) { 
                     if(tVal >= 6 && tVal < 24) isGreen = true; 
                 } else {
                     if (!(tVal >= 22.5 || tVal < 7)) { // Not Sleep
-                        if (prefs.has('std') && tVal >= 9 && tVal < 17) isGreen = true; 
+                        if (tVal >= 9 && tVal < 17) isGreen = true; // Implicit 9-5
                         if (prefs.has('early') && tVal >= 7 && tVal < 9) isGreen = true;
                         if (prefs.has('night') && tVal >= 17 && tVal < 22.5) isGreen = true;
                     }
@@ -558,7 +560,7 @@
         const g = document.getElementById('m-grid');
         for(let i=0; i<count; i++){
             const slotUTC = startUTC_MS + (i * stepMs);
-            const data = evaluateMatch(slotUTC, referenceOffset, parseInt(durVal));
+            const data = evaluateMatch(slotUTC, referenceOffset, durationMinutes);
             allProcessedSlots.push({ utc: slotUTC, ...data });
             const box = document.createElement('div');
             box.className = 'chart-box';
@@ -626,7 +628,7 @@
                     groups[groupKey].cities.push(name);
                 });
 
-                Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(key => {
+                Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(key => { // FIXED SORTING
                     const g = groups[key];
                     const local = new Date(refMS + (g.offset * 3600000));
                     const dateStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }); 
