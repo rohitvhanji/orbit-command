@@ -15,7 +15,6 @@
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
 
-        /* --- FIXED AUTH OVERLAY --- */
         #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
         .bg-mesh { position: absolute; width: 150%; height: 150%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: cover; opacity: 0.05; filter: invert(1); animation: drift 100s linear infinite; }
         @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -24,7 +23,6 @@
         .brand-section { flex: 1.2; text-align: left; color: white; }
         .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
         .brand-tagline { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.95); margin-top: 15px; font-weight: 400; }
-        .brand-mission { font-size: clamp(0.9rem, 2.5vw, 1.1rem); line-height: 1.5; color: rgba(255,255,255,0.8); margin-top: 15px; font-weight: 400; max-width: 500px; }
         .highlight-kindness { color: var(--slack-green); font-weight: 700; }
         .highlight-action { font-weight: 700; color: var(--slack-green); border-bottom: none; }
 
@@ -32,16 +30,8 @@
         .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
-        .btn-login:disabled { background: #ccc; cursor: wait; }
         .btn-signup { background: var(--slack-green); color: white; }
 
-        @media (max-width: 768px) {
-            .hero-container { flex-direction: column; text-align: center; gap: 30px; }
-            .brand-section { text-align: center; display: flex; flex-direction: column; align-items: center; }
-            .brand-section h1 { font-size: 4rem; }
-        }
-
-        /* --- APP SHELL --- */
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
@@ -63,7 +53,6 @@
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* --- LAYOUT --- */
         #rec-view { display: none; flex-grow: 1; background: white; flex-direction: column; height: 100%; overflow: hidden; padding: 0; }
         .fixed-header-group { padding: 20px 30px 0 30px; background: white; flex-shrink: 0; border-bottom: 1px solid #eee; z-index: 20; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -76,11 +65,9 @@
         .legend-item { display: flex; align-items: center; gap: 5px; }
         .legend-box { width: 12px; height: 12px; border-radius: 2px; }
         
-        /* Pills & Toggles */
         .filter-pill { padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
         .filter-pill.active { background: var(--slack-purple); color: white; border-color: var(--slack-purple); }
         .filter-pill.inactive { background: white; color: #888; border: 1px solid #ccc; opacity: 0.6; }
-        .filter-pill:hover { transform: translateY(-1px); }
 
         .pref-group { display: flex; gap: 4px; margin-top: 4px; }
         .pref-pill {
@@ -97,7 +84,6 @@
         .pref-pill.active { background: var(--slack-purple); color: white; border-color: var(--slack-purple); opacity: 1; font-weight: 700; }
         .pref-pill.global-active { background: var(--slack-green); color: white; border-color: var(--slack-green); opacity: 1; font-weight: 700; }
 
-        /* --- REC SECTION --- */
         #rec-area-wrapper { margin-top: 30px; border-top: 1px dashed #eee; padding-top: 20px; display: flex; gap: 40px; align-items: flex-start; }
         .rec-column-left { flex: 0 0 60%; } 
         .rec-column-right { flex: 1; border-left: 1px solid #eee; padding-left: 40px; min-height: 200px; } 
@@ -322,7 +308,7 @@
                     lat: parseFloat(l.lat) 
                 }; 
                 const key = `${l.tz}_${l.utc_offset}`;
-                if(!tzPreferences[key]) tzPreferences[key] = new Set(['std']);
+                // NO DEFAULT SET HERE - Defaults handled in loop
             });
             team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
             populateLocDropdown(); 
@@ -413,8 +399,6 @@
                     name: shortName, code: pendingCityInput.substring(0,3).toUpperCase(), 
                     lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: offset, tz: tzR.abbreviation, user_id: user.id 
                 }, { onConflict: 'user_id,name' });
-                const key = `${tzR.abbreviation}_${offset}`;
-                if(!tzPreferences[key]) tzPreferences[key] = new Set(['std']);
                 document.getElementById('cityInput').value = ''; loadData();
             } else { alert("Timezone not found."); }
         } catch(e) { console.error(e); }
@@ -492,26 +476,27 @@
 
             // --- 1. GLOBAL FLEX CHECK ---
             if (prefs.has('global')) {
-                // Green: 06:00 - 24:00 (Midnight). Red: 00:00 - 06:00.
                 const h = tValStart; 
-                let adjH = h < 6 ? h + 24 : h; // Normalize for late night
-                
+                let adjH = h < 6 ? h + 24 : h; 
                 if (h >= 6 && h < 24) isUserGreen = true;
-                else isUserRed = true; // Sleep 00:00 - 06:00
-                
-                // Keep Weekends Red
+                else isUserRed = true; 
                 const day = dStart.getUTCDay();
-                if (day === 0 || day === 6) { isUserGreen = false; isUserRed = true; }
-
+                if (day === 0 || day === 6) { isUserGreen = false; isUserRed = true; } // FIXED: Weekends now red
             } else {
-                // --- 2. MIX & MATCH CHECK ---
-                if (tValStart >= 22.5 || tValStart < 7) { isUserRed = true; } // Std Sleep
+                // --- 2. STANDARD CHECK ---
+                if (tValStart >= 22.5 || tValStart < 7) { isUserRed = true; } 
                 const day = dStart.getUTCDay();
-                if (day === 0 || day === 6) isUserRed = true; // Weekend
+                if (day === 0 || day === 6) isUserRed = true; 
 
                 if (!isUserRed) {
+                    // BASE WORK (09-12 & 13.5-17) is always Green if not 'std' specific
+                    if (prefs.has('std')) {
+                        if ((tValStart >= 9 && tValStart < 12) || (tValStart >= 13.5 && tValStart < 17)) isUserGreen = true;
+                    }
+
+                    // TOGGLES
                     if (prefs.has('early') && tValStart >= 7 && tValStart < 9) isUserGreen = true;
-                    if (prefs.has('std') && tValStart >= 9 && tValStart < 17) isUserGreen = true;
+                    if (prefs.has('lunch') && tValStart >= 12 && tValStart < 13.5) isUserGreen = true;
                     if (prefs.has('night') && tValStart >= 17 && tValStart < 22.5) isUserGreen = true;
                 }
             }
@@ -519,6 +504,7 @@
             if (isUserRed) { redFound = true; break; }
             if (isUserGreen) greenCount++; else blueCount++;
 
+            // Scoring
             if (refOffset !== null && Math.abs(loc.offset - refOffset) < 0.01) {
                 if (tValStart >= 9 && tValStart < 17) totalScore = 20; 
                 else if (tValStart < 9) totalScore = 20 - (9 - tValStart);
@@ -577,6 +563,8 @@
         card.appendChild(list);
         container.appendChild(card);
     }
+
+    let allProcessedSlots = [];
 
     function buildMatchChart() {
         toggleView('rec');
@@ -646,7 +634,8 @@
             // PILLS
             let pillHtml = `<div class="pref-group">
                 <div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')" title="Early: 07:00-09:00">🌅</div>
-                <div class="pref-pill ${prefs.has('std')?'active':''}" onclick="togglePreference('${key}', 'std')" title="Standard: 09:00-17:00">🍵</div>
+                <div class="pref-pill ${prefs.has('std')?'active':''}" onclick="togglePreference('${key}', 'std')" title="Work Shift: 09:00-17:00">🍵</div>
+                <div class="pref-pill ${prefs.has('lunch')?'active':''}" onclick="togglePreference('${key}', 'lunch')" title="Working Lunch: 12:00-13:30">🍽️</div>
                 <div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')" title="Night: 17:00-22:30">🦉</div>
                 <div class="pref-pill ${prefs.has('global')?'global-active':''}" style="margin-left:5px;" onclick="togglePreference('${key}', 'global')" title="Global Flex: 06:00-00:00">🌍</div>
             </div>`;
@@ -655,18 +644,24 @@
             
             for(let i=0; i<count; i++){
                 const slotUTC = startUTC_MS + (i * stepMs);
-                const tVal = new Date(slotUTC + (loc.offset * 3600000)).getUTCHours() + (new Date(slotUTC + (loc.offset * 3600000)).getUTCMinutes()/60);
+                const localDate = new Date(slotUTC + (loc.offset * 3600000));
+                const tVal = localDate.getUTCHours() + (localDate.getUTCMinutes()/60);
                 const status = getStatus(slotUTC + (loc.offset * 3600000), tVal);
                 let displayEmoji = status.emoji;
                 
                 // VISUAL LOGIC
                 let isGreen = false;
+                const day = localDate.getUTCDay(); // Local day for that timezone
+
                 if (prefs.has('global')) {
-                    if (tVal >= 6 && tVal < 24) isGreen = true;
+                    if (tVal >= 6 && tVal < 24 && day !== 0 && day !== 6) isGreen = true; // FIXED: Added weekend check here too
                 } else {
                     if (!(tVal >= 22.5 || tVal < 7)) { // Not Sleep
+                        if (prefs.has('std')) {
+                            if ((tVal >= 9 && tVal < 12) || (tVal >= 13.5 && tVal < 17)) isGreen = true;
+                        }
                         if (prefs.has('early') && tVal >= 7 && tVal < 9) isGreen = true;
-                        if (prefs.has('std') && tVal >= 9 && tVal < 17) isGreen = true;
+                        if (prefs.has('lunch') && tVal >= 12 && tVal < 13.5) isGreen = true;
                         if (prefs.has('night') && tVal >= 17 && tVal < 22.5) isGreen = true;
                     }
                 }
@@ -696,18 +691,21 @@
         }
 
         const recContainer = document.getElementById('rec-results');
-        if (!recContainer.hasChildNodes()) {
-             recContainer.innerHTML = '';
-             const sortedRecs = allProcessedSlots.filter(r => !r.isRed).sort((a,b) => {
-                if (a.isGreen && !b.isGreen) return -1;
-                if (!a.isGreen && b.isGreen) return 1;
-                if (!a.isGreen && !b.isGreen) { if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore; }
-                return a.utc - b.utc;
-            }).slice(0, 3);
+        
+        // --- NEW SORTING LOGIC ---
+        recContainer.innerHTML = '';
+        const sortedRecs = allProcessedSlots.filter(r => !r.isRed).sort((a,b) => {
+            if (a.isGreen && !b.isGreen) return -1; // Green wins
+            if (!a.isGreen && b.isGreen) return 1;  // Green wins
             
-            if(sortedRecs.length > 0) sortedRecs.forEach(s => renderTile(s, recContainer, false));
-            else recContainer.innerHTML = '<div style="color:#888; font-size:0.9rem; padding:10px;">No acceptable slots found.</div>';
-        }
+            // If both are Green (or both Yellow), use Score
+            if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+            
+            return a.utc - b.utc; // Tie-breaker: Earlier time first
+        }).slice(0, 3);
+        
+        if(sortedRecs.length > 0) sortedRecs.forEach(s => renderTile(s, recContainer, false));
+        else recContainer.innerHTML = '<div style="color:#888; font-size:0.9rem; padding:10px;">No acceptable slots found.</div>';
 
         const selContainer = document.getElementById('selected-results');
         const selWrapper = document.getElementById('selected-section');
@@ -736,7 +734,6 @@
         document.getElementById('hourVal').value = displayDate.getUTCHours();
         document.getElementById('minVal').value = displayDate.getUTCMinutes() >= 30 ? "30" : "00";
         render(); 
-        document.getElementById('rec-results').innerHTML = ''; 
         buildMatchChart(); 
     }
 
@@ -755,12 +752,14 @@
                     if(!groups[groupKey]) groups[groupKey] = { label: d.tz, offset: d.offset, cities: [] };
                     groups[groupKey].cities.push(name);
                 });
+
                 Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(key => {
                     const g = groups[key];
                     const local = new Date(refMS + (g.offset * 3600000));
                     const dateStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }); 
                     const tS = local.getUTCHours().toString().padStart(2,'0') + ":" + local.getUTCMinutes().toString().padStart(2,'0');
                     const timeStr = `${dateStr} ${tS}`;
+                    
                     let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${g.label} (${g.offset >= 0 ? '+' : ''}${g.offset})</span><span>${timeStr}</span></div>`;
                     g.cities.forEach(loc => {
                         const mates = team.filter(m => m.loc === loc);
