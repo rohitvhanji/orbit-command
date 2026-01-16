@@ -249,7 +249,25 @@
     async function logout() { await _supabase.auth.signOut(); location.reload(); }
 
     async function loadData() {
-        const { data: locs } = await _supabase.from('locations').select('*');
+        const { data: { user } } = await _supabase.auth.getUser();
+        if (!user) return;
+
+        let { data: locs } = await _supabase.from('locations').select('*');
+        
+        // --- AUTO SEED DEFAULT LOCATIONS ---
+        if (!locs || locs.length === 0) {
+            const defaults = [
+                { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST', user_id: user.id },
+                { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.00, utc_offset: -5, tz: 'EST', user_id: user.id },
+                { name: 'Chicago', code: 'CHI', lat: 41.87, lon: -87.62, utc_offset: -6, tz: 'CST', user_id: user.id },
+                { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.41, utc_offset: -8, tz: 'PST', user_id: user.id }
+            ];
+            await _supabase.from('locations').insert(defaults);
+            const { data: newLocs } = await _supabase.from('locations').select('*');
+            locs = newLocs;
+        }
+        // ------------------------------------
+
         const { data: members } = await _supabase.from('teammates').select('*');
         locationData = {};
         if(locs) locs.forEach(l => { 
