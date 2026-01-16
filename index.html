@@ -15,7 +15,7 @@
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background: white; overflow: hidden; }
 
-        /* --- FIXED AUTH OVERLAY CSS --- */
+        /* --- FIXED AUTH OVERLAY --- */
         #auth-overlay { position: fixed; inset: 0; background: var(--loom-gradient); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
         .bg-mesh { position: absolute; width: 150%; height: 150%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: cover; opacity: 0.05; filter: invert(1); animation: drift 100s linear infinite; }
         @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -41,14 +41,14 @@
             .brand-section h1 { font-size: 4rem; }
         }
 
-        /* --- APP SHELL STYLES --- */
+        /* --- APP SHELL --- */
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
         .sidebar-header { padding: 18px; background: var(--slack-navy); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .sidebar-header h2 { margin: 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: white; text-transform: uppercase; }
         .mgmt-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
         .mgmt-input { width: 100%; padding: 10px; border-radius: 4px; border: none; margin-bottom: 6px; box-sizing: border-box; background: rgba(255,255,255,0.1); color: white; }
-        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 100px; }
+        #member-groups { overflow-y: auto; flex-grow: 1; padding-bottom: 20px; }
         .timezone-group { background: rgba(0,0,0,0.1); margin-top: 2px; }
         .tz-header { padding: 10px 15px; font-size: 0.7rem; font-weight: 900; background: rgba(0,0,0,0.25); display: flex; justify-content: space-between; align-items: center; }
         .btn-hover-del { cursor: pointer; color: #ff4d4d; font-size: 1.1rem; opacity: 0; transition: 0.2s; padding-left: 10px; }
@@ -63,43 +63,48 @@
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* --- SCROLLABLE LAYOUT --- */
+        /* --- LAYOUT --- */
         #rec-view { display: none; flex-grow: 1; background: white; flex-direction: column; height: 100%; overflow: hidden; padding: 0; }
-        
-        /* Fixed Header */
         .fixed-header-group { padding: 20px 30px 0 30px; background: white; flex-shrink: 0; border-bottom: 1px solid #eee; z-index: 20; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-        
-        /* Scrollable Body */
         .scrollable-body { flex-grow: 1; overflow-y: auto; padding: 20px 30px 40px 30px; }
-        .chart-centered-content { max-width: 1300px; margin: 0 auto; }
+        .chart-centered-content { max-width: 1400px; margin: 0 auto; }
         
         .chart-controls { display: flex; align-items: center; gap: 20px; }
         .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; }
         .legend-item { display: flex; align-items: center; gap: 5px; }
         .legend-box { width: 12px; height: 12px; border-radius: 2px; }
         
-        /* New Global Toggle Style */
-        .global-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; background: #f8f8f8; padding: 5px 10px; border-radius: 4px; border: 1px solid #eee; cursor: pointer; }
-        .global-toggle input { margin: 0; cursor: pointer; }
-
+        /* Pills & Toggles */
         .filter-pill { padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
         .filter-pill.active { background: var(--slack-purple); color: white; border-color: var(--slack-purple); }
         .filter-pill.inactive { background: white; color: #888; border: 1px solid #ccc; opacity: 0.6; }
         .filter-pill:hover { transform: translateY(-1px); }
 
-        /* --- RECOMMENDATION & SELECTION SPLIT LAYOUT --- */
+        .pref-group { display: flex; gap: 4px; margin-top: 4px; }
+        .pref-pill {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            background: #f8f8f8;
+            opacity: 0.6;
+            transition: 0.1s;
+        }
+        .pref-pill:hover { opacity: 1; border-color: #999; }
+        .pref-pill.active { background: var(--slack-purple); color: white; border-color: var(--slack-purple); opacity: 1; font-weight: 700; }
+        .pref-pill.global-active { background: var(--slack-green); color: white; border-color: var(--slack-green); opacity: 1; font-weight: 700; }
+
+        /* --- REC SECTION --- */
         #rec-area-wrapper { margin-top: 30px; border-top: 1px dashed #eee; padding-top: 20px; display: flex; gap: 40px; align-items: flex-start; }
-        
-        .rec-column-left { flex: 0 0 60%; } /* Left side 60% */
-        .rec-column-right { flex: 1; border-left: 1px solid #eee; padding-left: 40px; min-height: 200px; } /* Right side rest */
-        
+        .rec-column-left { flex: 0 0 60%; } 
+        .rec-column-right { flex: 1; border-left: 1px solid #eee; padding-left: 40px; min-height: 200px; } 
         .section-header { font-size: 0.8rem; font-weight: 900; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
         
         #rec-results { display: flex; gap: 15px; flex-wrap: wrap; }
         
-        /* --- FIXED TILE SIZING & SCROLL --- */
         .rec-card { width: 220px; height: 220px; flex-shrink: 0; background: white; border: 1px solid #e2e2e2; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: 0.2s; position: relative; cursor: pointer; display: flex; flex-direction: column; box-sizing: border-box; }
         .rec-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: var(--slack-purple); }
         .rec-tag { position: absolute; top: 10px; right: 10px; font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
@@ -108,24 +113,14 @@
         .rec-time-main { font-size: 1.2rem; font-weight: 900; color: var(--text-dark); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
         .rec-date-sub { font-size: 0.75rem; color: #666; margin-bottom: 12px; font-weight: 600; flex-shrink: 0; }
         
-        /* Internal Scrollable List */
         .rec-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex-grow: 1; padding-right: 5px; }
-        /* Custom scrollbar for list */
         .rec-list::-webkit-scrollbar { width: 4px; }
         .rec-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
         
         .rec-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: #555; border-bottom: 1px solid #f5f5f5; padding-bottom: 3px; flex-shrink: 0; }
         .rec-row span:last-child { font-weight: 700; color: var(--text-dark); }
         
-        /* SELECTED CARD DISTINCT STYLE */
-        .selected-card-style { 
-            border: 2px solid var(--slack-blue); 
-            background: #F2F7FF; /* Distinct Light Blue BG */
-            box-shadow: 0 4px 12px rgba(18, 100, 163, 0.2); 
-            width: 100%; 
-            max-width: 300px;
-            height: 220px; /* Consistent height */
-        }
+        .selected-card-style { border: 2px solid var(--slack-blue); background: #F2F7FF; box-shadow: 0 4px 12px rgba(18, 100, 163, 0.2); width: 100%; max-width: 300px; height: 220px; }
 
         /* Chart Styles */
         .timezone-row-container { margin-bottom: 10px; }
@@ -134,7 +129,7 @@
         .chart-row { display: flex; align-items: center; }
         .chart-label { width: 140px; display: flex; flex-direction: column; justify-content: center; padding-right: 10px; box-sizing: border-box; }
         .chart-label span { font-size: 0.7rem; font-weight: 900; color: var(--slack-purple); text-transform: uppercase; }
-        .pref-select { margin-top: 4px; font-size: 0.65rem; padding: 2px; border-radius: 4px; border: 1px solid #ddd; width: 100%; color: var(--text-dark); background: white; }
+        
         .chart-grid { flex-grow: 1; display: flex; gap: 2px; }
         .chart-box { flex: 1; height: 32px; border-radius: 3px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
         .match-row { margin-top: 20px; padding-top: 5px; border-top: 4px solid var(--slack-green); background: rgba(46, 182, 125, 0.05); border-radius: 0 0 8px 8px; }
@@ -231,12 +226,6 @@
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-lunch)"></div> Ask before scheduling</div>
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-snooze)"></div> Don't Schedule</div>
                             </div>
-                            
-                            <label class="global-toggle">
-                                <input type="checkbox" id="workingLunchToggle" onchange="buildMatchChart()"> 
-                                🍽️ Working Lunch
-                            </label>
-
                             <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
                         </div>
                     </div>
@@ -288,7 +277,7 @@
     let workDateUTC_MS = Date.now();
     let chartExclusions = new Set();
     let tzPreferences = {}; 
-    let manualSelectionSlot = null; // Track if we are viewing a single selection
+    let manualSelectionSlot = null;
 
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
@@ -308,8 +297,6 @@
             if (!user) return;
 
             let { data: locs } = await _supabase.from('locations').select('*');
-            
-            // Auto-Seeding Logic
             if (!locs || locs.length === 0) {
                 try {
                     const defaults = [
@@ -334,6 +321,8 @@
                     lon: parseFloat(l.lon), 
                     lat: parseFloat(l.lat) 
                 }; 
+                const key = `${l.tz}_${l.utc_offset}`;
+                if(!tzPreferences[key]) tzPreferences[key] = new Set(['std']);
             });
             team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
             populateLocDropdown(); 
@@ -419,10 +408,13 @@
             if(tzR.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
                 const shortName = geo.address.city || geo.address.town || geo.address.village || geo.display_name.split(',')[0];
+                const offset = tzR.gmtOffset / 3600;
                 await _supabase.from('locations').upsert({ 
                     name: shortName, code: pendingCityInput.substring(0,3).toUpperCase(), 
-                    lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id 
+                    lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: offset, tz: tzR.abbreviation, user_id: user.id 
                 }, { onConflict: 'user_id,name' });
+                const key = `${tzR.abbreviation}_${offset}`;
+                if(!tzPreferences[key]) tzPreferences[key] = new Set(['std']);
                 document.getElementById('cityInput').value = ''; loadData();
             } else { alert("Timezone not found."); }
         } catch(e) { console.error(e); }
@@ -445,6 +437,20 @@
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc'); sel.innerHTML = '';
         Object.keys(locationData).sort().forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l.split(',')[0]; sel.appendChild(opt); });
+    }
+
+    function togglePreference(key, type) {
+        if (!tzPreferences[key]) tzPreferences[key] = new Set(['std']);
+        const prefs = tzPreferences[key];
+        if (type === 'global') {
+            if (prefs.has('global')) prefs.delete('global');
+            else { prefs.clear(); prefs.add('global'); }
+        } else {
+            if (prefs.has('global')) prefs.delete('global');
+            if (prefs.has(type)) prefs.delete(type);
+            else prefs.add(type);
+        }
+        buildMatchChart();
     }
 
     function getStatus(utcMS, timeVal) {
@@ -472,7 +478,6 @@
 
         let redFound = false, greenCount = 0, blueCount = 0, totalCount = activeGroups.length;
         let totalScore = 0; 
-        const isWorkingLunch = document.getElementById('workingLunchToggle')?.checked || false;
         const endUTC = startUTC + (durationMinutes * 60000);
 
         for (const groupKey of activeGroups) {
@@ -480,30 +485,45 @@
             const offsetMs = loc.offset * 3600000;
             const dStart = new Date(startUTC + offsetMs);
             const tValStart = dStart.getUTCHours() + (dStart.getUTCMinutes()/60);
-            const dEnd = new Date(endUTC + offsetMs - 1000);
-            const sStart = getStatus(startUTC + offsetMs, tValStart);
-            const sEnd = getStatus(endUTC + offsetMs - 1000, dEnd.getUTCHours() + (dEnd.getUTCMinutes()/60));
-            const pref = tzPreferences[groupKey] || 'standard';
+            
+            const prefs = tzPreferences[groupKey] || new Set(['std']);
+            let isUserGreen = false;
+            let isUserRed = false;
+
+            // --- 1. GLOBAL FLEX CHECK ---
+            if (prefs.has('global')) {
+                // Green: 06:00 - 24:00 (Midnight). Red: 00:00 - 06:00.
+                const h = tValStart; 
+                let adjH = h < 6 ? h + 24 : h; // Normalize for late night
+                
+                if (h >= 6 && h < 24) isUserGreen = true;
+                else isUserRed = true; // Sleep 00:00 - 06:00
+                
+                // Keep Weekends Red
+                const day = dStart.getUTCDay();
+                if (day === 0 || day === 6) { isUserGreen = false; isUserRed = true; }
+
+            } else {
+                // --- 2. MIX & MATCH CHECK ---
+                if (tValStart >= 22.5 || tValStart < 7) { isUserRed = true; } // Std Sleep
+                const day = dStart.getUTCDay();
+                if (day === 0 || day === 6) isUserRed = true; // Weekend
+
+                if (!isUserRed) {
+                    if (prefs.has('early') && tValStart >= 7 && tValStart < 9) isUserGreen = true;
+                    if (prefs.has('std') && tValStart >= 9 && tValStart < 17) isUserGreen = true;
+                    if (prefs.has('night') && tValStart >= 17 && tValStart < 22.5) isUserGreen = true;
+                }
+            }
+
+            if (isUserRed) { redFound = true; break; }
+            if (isUserGreen) greenCount++; else blueCount++;
 
             if (refOffset !== null && Math.abs(loc.offset - refOffset) < 0.01) {
                 if (tValStart >= 9 && tValStart < 17) totalScore = 20; 
                 else if (tValStart < 9) totalScore = 20 - (9 - tValStart);
                 else totalScore = 20 - (tValStart - 17);
             }
-
-            if (sStart.color === "var(--status-weekend)" || sEnd.color === "var(--status-weekend)" || sStart.color === "var(--status-snooze)" || sEnd.color === "var(--status-snooze)") { 
-                redFound = true; break; 
-            }
-
-            let userIsGreen = false;
-            if (sStart.isWork && sEnd.isWork) userIsGreen = true;
-            else if (sStart.color === "var(--status-lunch)" && isWorkingLunch) userIsGreen = true;
-            else if (sStart.isBlue) {
-                if (pref === 'early' && tValStart < 9) userIsGreen = true; 
-                else if (pref === 'night' && tValStart >= 17) userIsGreen = true; 
-            }
-            
-            if (userIsGreen) greenCount++; else blueCount++;
         }
         
         if (redFound) return { color: "var(--status-snooze)", isRed: true, totalScore: -9999 };
@@ -511,13 +531,10 @@
         return { color: "var(--status-lunch)", isRed: false, isGreen: false, totalScore };
     }
 
-    function updatePreference(key, val) { tzPreferences[key] = val; buildMatchChart(); }
-
     function renderTile(s, container, isSingle) {
         const card = document.createElement('div');
         card.className = isSingle ? 'rec-card selected-card-style' : 'rec-card';
-        card.onclick = () => syncAndRender(s.utc); // CLICK HANDLER - triggers sync
-        
+        card.onclick = () => syncAndRender(s.utc); 
         const tag = document.createElement('span');
         tag.className = s.isGreen ? 'rec-tag tag-green' : 'rec-tag tag-yellow';
         tag.innerText = s.isGreen ? 'MATCH' : 'ASK';
@@ -539,7 +556,6 @@
         title.className = 'rec-time-main';
         title.innerHTML = `<span>${s.isGreen ? '🟢' : '🟡'}</span> ${refDisplayTime}`;
         card.appendChild(title);
-        
         const sub = document.createElement('div');
         sub.className = 'rec-date-sub';
         sub.innerText = refDateStr;
@@ -547,7 +563,6 @@
 
         const list = document.createElement('div');
         list.className = 'rec-list';
-        
         const groups = {};
         Object.values(locationData).forEach(l => { const key = `${l.tz}_${l.offset}`; if (!groups[key]) groups[key] = l; });
         const allGroupKeys = Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset);
@@ -562,8 +577,6 @@
         card.appendChild(list);
         container.appendChild(card);
     }
-
-    let allProcessedSlots = [];
 
     function buildMatchChart() {
         toggleView('rec');
@@ -616,7 +629,8 @@
             if (chartExclusions.has(key)) return; 
             const loc = groups[key];
             const label = `${loc.tz} (${loc.offset >= 0 ? '+' : ''}${loc.offset})`; 
-            const pref = tzPreferences[key] || 'standard';
+            if(!tzPreferences[key]) tzPreferences[key] = new Set(['std']);
+            const prefs = tzPreferences[key];
 
             let tzContainer = `<div class="timezone-row-container">`;
             let timeRow = `<div class="local-time-row">`;
@@ -624,16 +638,20 @@
                 const slotUTC = startUTC_MS + (i * stepMs);
                 const localDate = new Date(slotUTC + (loc.offset * 3600000));
                 let h = localDate.getUTCHours();
-                let min = localDate.getUTCMinutes();
-                let display;
-                if (h === 0 && min === 0) display = `<span style="color:var(--slack-purple); font-weight:900; font-size:0.6rem;">${localDate.toLocaleDateString('en-US', { weekday: 'short', timeZone:'UTC' })}</span>`;
-                else if (durVal === "30" && min !== 0) display = ""; 
-                else display = h; 
+                let display = (h === 0 && localDate.getUTCMinutes() === 0) ? `<span style="color:var(--slack-purple); font-weight:900; font-size:0.6rem;">${localDate.toLocaleDateString('en-US', { weekday: 'short', timeZone:'UTC' })}</span>` : (durVal==="30" && localDate.getUTCMinutes()!==0 ? "" : h);
                 timeRow += `<div class="time-tick">${display}</div>`;
             }
             timeRow += `</div>`;
 
-            let dataRow = `<div class="chart-row"><div class="chart-label"><span>${label}</span><select class="pref-select" onchange="updatePreference('${key}', this.value)"><option value="standard" ${pref==='standard'?'selected':''}>Standard</option><option value="early" ${pref==='early'?'selected':''}>Early Bird</option><option value="night" ${pref==='night'?'selected':''}>Night Owl</option></select></div><div class="chart-grid">`;
+            // PILLS
+            let pillHtml = `<div class="pref-group">
+                <div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')" title="Early: 07:00-09:00">🌅</div>
+                <div class="pref-pill ${prefs.has('std')?'active':''}" onclick="togglePreference('${key}', 'std')" title="Standard: 09:00-17:00">🍵</div>
+                <div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')" title="Night: 17:00-22:30">🦉</div>
+                <div class="pref-pill ${prefs.has('global')?'global-active':''}" style="margin-left:5px;" onclick="togglePreference('${key}', 'global')" title="Global Flex: 06:00-00:00">🌍</div>
+            </div>`;
+
+            let dataRow = `<div class="chart-row"><div class="chart-label"><span>${label}</span>${pillHtml}</div><div class="chart-grid">`;
             
             for(let i=0; i<count; i++){
                 const slotUTC = startUTC_MS + (i * stepMs);
@@ -641,10 +659,18 @@
                 const status = getStatus(slotUTC + (loc.offset * 3600000), tVal);
                 let displayEmoji = status.emoji;
                 
-                if (status.isBlue) {
-                    if (pref === 'early' && tVal < 9) displayEmoji = "💻";
-                    else if (pref === 'night' && tVal >= 17) displayEmoji = "💻";
+                // VISUAL LOGIC
+                let isGreen = false;
+                if (prefs.has('global')) {
+                    if (tVal >= 6 && tVal < 24) isGreen = true;
+                } else {
+                    if (!(tVal >= 22.5 || tVal < 7)) { // Not Sleep
+                        if (prefs.has('early') && tVal >= 7 && tVal < 9) isGreen = true;
+                        if (prefs.has('std') && tVal >= 9 && tVal < 17) isGreen = true;
+                        if (prefs.has('night') && tVal >= 17 && tVal < 22.5) isGreen = true;
+                    }
                 }
+                if (isGreen) displayEmoji = "💻";
                 
                 let highlightClass = "";
                 if (isFitMode && workDateUTC_MS === slotUTC) highlightClass = "highlight-slot";
@@ -670,8 +696,7 @@
         }
 
         const recContainer = document.getElementById('rec-results');
-        // IMPORTANT: We NEVER clear or hide recs anymore. We just update content if empty.
-        if (!recContainer.hasChildNodes()) { // Only build if not built? No, should rebuild on data change
+        if (!recContainer.hasChildNodes()) {
              recContainer.innerHTML = '';
              const sortedRecs = allProcessedSlots.filter(r => !r.isRed).sort((a,b) => {
                 if (a.isGreen && !b.isGreen) return -1;
@@ -691,7 +716,6 @@
         if (isFitMode) {
             const singleSlot = allProcessedSlots.find(r => r.utc === workDateUTC_MS);
             if (singleSlot) {
-                // DO NOT HIDE RECS
                 renderTile(singleSlot, selContainer, true);
                 selWrapper.style.display = 'block';
             }
@@ -711,23 +735,16 @@
         else displayDate = new Date(utcMS + (parseFloat(refVal) * 3600000));
         document.getElementById('hourVal').value = displayDate.getUTCHours();
         document.getElementById('minVal').value = displayDate.getUTCMinutes() >= 30 ? "30" : "00";
-        // TRIGGER RENDER TO HIGHLIGHT
         render(); 
-        
-        // Rebuild to show Selected Section (Force rebuild of everything to apply highlights)
-        // Clear Recs first to force rebuild with correct highlights? No, Recs stay static mostly.
-        // Actually, rebuild needed to apply CSS highlight class to grid.
-        document.getElementById('rec-results').innerHTML = ''; // Force redraw of recs to ensure clean state
+        document.getElementById('rec-results').innerHTML = ''; 
         buildMatchChart(); 
     }
 
-    // RESTORED: This was missing in the previous "broken" version.
     function render() {
         const refMS = isFitMode ? workDateUTC_MS : Date.now();
         const container = document.getElementById('member-groups'); 
         if (container) {
             container.innerHTML = '';
-            
             if (Object.keys(locationData).length === 0) {
                 container.innerHTML = `<div style="padding:40px 20px; text-align:center; opacity:0.6;"><div style="font-size:30px; margin-bottom:10px;">👇</div><p style="font-weight:700;">It's lonely here!</p><p>Add your current city in the box above to start.</p></div>`;
             } else {
@@ -738,14 +755,12 @@
                     if(!groups[groupKey]) groups[groupKey] = { label: d.tz, offset: d.offset, cities: [] };
                     groups[groupKey].cities.push(name);
                 });
-
                 Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(key => {
                     const g = groups[key];
                     const local = new Date(refMS + (g.offset * 3600000));
                     const dateStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }); 
                     const tS = local.getUTCHours().toString().padStart(2,'0') + ":" + local.getUTCMinutes().toString().padStart(2,'0');
                     const timeStr = `${dateStr} ${tS}`;
-                    
                     let tzHtml = `<div class="timezone-group"><div class="tz-header"><span>${g.label} (${g.offset >= 0 ? '+' : ''}${g.offset})</span><span>${timeStr}</span></div>`;
                     g.cities.forEach(loc => {
                         const mates = team.filter(m => m.loc === loc);
