@@ -1,13 +1,3 @@
-Here is the corrected code.
-
-I have made exactly **two changes** to the logic to fix the "random toggles" issue without breaking anything else:
-
-1. **Stopped Saving Toggles:** In `saveToLocal`, I removed the `prefs` line.
-2. **Stopped Loading Toggles:** In `loadData`, I removed the line that reads `parsed.prefs` and ensured `tzPreferences` is always reset to an empty Set on load.
-
-This ensures you always start with a clean slate, but **Link Sharing** still works because that uses a different function (`loadSharedState`) which I did not touch.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -987,5 +977,3 @@ This ensures you always start with a clean slate, but **Link Sharing** still wor
 </script>
 </body>
 </html>
-
-```
