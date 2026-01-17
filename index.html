@@ -374,12 +374,13 @@
         }
     }
 
+    // UPDATED: Removed 'prefs' from being saved to LocalStorage
     function saveToLocal() {
         if(!isGuestMode) return;
         const data = {
             locations: Object.values(locationData).map(l => ({ name: l.name || Object.keys(locationData).find(k => locationData[k] === l), ...l })),
-            team: team,
-            prefs: Array.from(Object.entries(tzPreferences)).map(([k, v]) => [k, Array.from(v)])
+            team: team
+            // Preferences removed
         };
         localStorage.setItem('orbit_guest_data', JSON.stringify(data));
     }
@@ -396,7 +397,7 @@
                     if(parsed.locations && parsed.locations.length > 0) {
                         locs = parsed.locations;
                         members = parsed.team;
-                        if(parsed.prefs) parsed.prefs.forEach(([k, v]) => tzPreferences[k] = new Set(v));
+                        // UPDATED: Removed loading of prefs. Always start fresh.
                     } else {
                         locs = DEFAULT_LOCATIONS;
                         members = DEFAULT_TEAM;
@@ -411,7 +412,7 @@
                     const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
                     locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: l.lon, lat: l.lat, name: l.name };
                     const key = `${l.tz}_${valOffset}`;
-                    if(!tzPreferences[key]) tzPreferences[key] = new Set();
+                    tzPreferences[key] = new Set(); // UPDATED: Always overwrite with empty Set
                 });
                 team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
 
@@ -435,7 +436,7 @@
                     const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
                     locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
                     const key = `${l.tz}_${valOffset}`;
-                    if(!tzPreferences[key]) tzPreferences[key] = new Set();
+                    tzPreferences[key] = new Set(); // UPDATED: Always overwrite with empty Set
                 });
                 team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
             }
