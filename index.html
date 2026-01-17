@@ -198,7 +198,7 @@
             <div class="fixed-header-group">
                 <div class="chart-centered-content">
                     <div class="chart-header-row">
-                        <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Timezone Grid</span></div>
+                        <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Team Overlap</h2><span style="font-size:0.75rem; color:#666;">Timezone Grid</span></div>
                         <div class="chart-controls">
                             <div class="chart-legend">
                                 <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Match</div>
@@ -686,7 +686,7 @@
             const gDetails = encodeURIComponent("Scheduled via Orbit.");
             const gUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${gTitle}&dates=${gStart}/${gEnd}&details=${gDetails}`;
             
-            actionBtnHtml = `<a href="${gUrl}" target="_blank" style="display:block; margin-top:15px; text-align:center; padding:12px; background:var(--slack-blue); color:white; text-decoration:none; border-radius:6px; font-weight:700; font-size:0.9rem; transition:0.2s;">📅 Book on Google Cal</a>`;
+            actionBtnHtml = `<a href="${gUrl}" target="_blank" style="display:block; margin-top:15px; text-align:center; padding:12px; background:var(--slack-blue); color:white; text-decoration:none; border-radius:6px; font-weight:700; font-size:0.9rem; transition:0.2s;">📅 Schedule Google Meet</a>`;
         }
         // ----------------------------------------
 
