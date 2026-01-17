@@ -255,8 +255,8 @@
             if (!locs || locs.length === 0) {
                 const defaults = [
                     { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST', user_id: user.id },
-                    { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.00, utc_offset: -5, tz: 'EST', user_id: user.id },
-                    { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.41, utc_offset: -8, tz: 'PST', user_id: user.id }
+                    { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.0, utc_offset: -5, tz: 'EST', user_id: user.id },
+                    { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.4, utc_offset: -8, tz: 'PST', user_id: user.id }
                 ];
                 await _supabase.from('locations').insert(defaults);
                 const { data: nl } = await _supabase.from('locations').select('*');
@@ -406,20 +406,23 @@
         if (redFound) return { color: "var(--status-snooze)", isRed: true, totalScore: -9999, reason: "Some teams are offline" };
         
         const isGreen = (greenCount === totalCount);
+        let reason = "";
+
         if (isGreen) {
-            totalScore = 50; 
+            totalScore = 1000; 
+            reason = "✅ Everyone is online";
         } else {
             const anchorTime = new Date(startUTC + (anchorOffset * 3600000));
             const anchorH = anchorTime.getUTCHours() + (anchorTime.getUTCMinutes()/60);
-            totalScore = 20 - Math.abs(anchorH - 13);
             
-            // PENALTY IF ANCHOR IS AT LUNCH
-            if(anchorH >= 12 && anchorH < 13.5) {
-                totalScore -= 5;
+            if (anchorH >= 12 && anchorH < 13.5) {
+                totalScore = 100; // Penalized (Lunch)
+                reason = "⚠️ During lunch hours";
+            } else {
+                totalScore = 500; // Standard Yellow
+                reason = `⭐ Earliest available for ${anchorLabel}`;
             }
         }
-
-        const reason = isGreen ? "✅ Everyone is online" : `⭐ Best fit for ${anchorLabel}`;
 
         return { 
             color: isGreen ? "var(--slack-green)" : "var(--status-lunch)", 
@@ -609,10 +612,8 @@
         const recContainer = document.getElementById('rec-results');
         recContainer.innerHTML = '';
         const sortedRecs = allProcessedSlots.filter(r => !r.isRed).sort((a,b) => {
-            if (a.isGreen && !b.isGreen) return -1;
-            if (!a.isGreen && b.isGreen) return 1;
-            if (a.isGreen) return a.utc - b.utc;
-            return b.totalScore - a.totalScore;
+            if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+            return a.utc - b.utc;
         }).slice(0, 3);
         
         if(sortedRecs.length > 0) sortedRecs.forEach(s => renderTile(s, recContainer, false));
