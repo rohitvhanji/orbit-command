@@ -80,19 +80,20 @@
         .section-header { font-size: 0.8rem; font-weight: 900; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
         
         #rec-results { display: flex; gap: 15px; flex-wrap: wrap; }
-        .rec-card { width: 220px; height: 220px; flex-shrink: 0; background: white; border: 1px solid #e2e2e2; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: 0.2s; position: relative; cursor: pointer; display: flex; flex-direction: column; box-sizing: border-box; }
+        .rec-card { width: 220px; height: 235px; flex-shrink: 0; background: white; border: 1px solid #e2e2e2; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: 0.2s; position: relative; cursor: pointer; display: flex; flex-direction: column; box-sizing: border-box; }
         .rec-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: var(--slack-purple); }
         .rec-tag { position: absolute; top: 10px; right: 10px; font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
         .tag-green { background: #E4F7EB; color: var(--slack-green); }
         .tag-yellow { background: #FEF3C7; color: #D97706; }
-        .rec-time-main { font-size: 1.2rem; font-weight: 900; color: var(--text-dark); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-        .rec-date-sub { font-size: 0.75rem; color: #666; margin-bottom: 12px; font-weight: 600; flex-shrink: 0; }
+        .rec-time-main { font-size: 1.1rem; font-weight: 900; color: var(--text-dark); margin-bottom: 2px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+        .rec-reason { font-size: 0.65rem; color: #888; margin-bottom: 5px; font-style: italic; }
+        .rec-date-sub { font-size: 0.75rem; color: #666; margin-bottom: 10px; font-weight: 600; flex-shrink: 0; }
         .rec-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex-grow: 1; padding-right: 5px; }
         .rec-list::-webkit-scrollbar { width: 4px; }
         .rec-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
         .rec-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: #555; border-bottom: 1px solid #f5f5f5; padding-bottom: 3px; flex-shrink: 0; }
         .rec-row span:last-child { font-weight: 700; color: var(--text-dark); }
-        .selected-card-style { border: 2px solid var(--slack-blue); background: #F2F7FF; box-shadow: 0 4px 12px rgba(18, 100, 163, 0.2); width: 100%; max-width: 300px; height: 220px; }
+        .selected-card-style { border: 2px solid var(--slack-blue); background: #F2F7FF; box-shadow: 0 4px 12px rgba(18, 100, 163, 0.2); width: 100%; max-width: 300px; height: 235px; }
 
         .timezone-row-container { margin-bottom: 10px; }
         .local-time-row { display: flex; margin-left: 220px; gap: 2px; margin-bottom: 2px; }
@@ -266,7 +267,7 @@
             if(locs) locs.forEach(l => { 
                 locationData[l.name] = { code: l.code, offset: l.utc_offset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat) }; 
                 const key = `${l.tz}_${l.utc_offset}`;
-                if(!tzPreferences[key]) tzPreferences[key] = new Set(); // DEFAULT IS EMPTY = STANDARD 9-5
+                if(!tzPreferences[key]) tzPreferences[key] = new Set();
             });
             team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
             populateLocDropdown(); populateTzDropdown(); render();
@@ -363,7 +364,7 @@
         document.getElementById('rec-view').style.display = v === 'rec' ? 'flex' : 'none';
     }
 
-    function evaluateMatch(startUTC, refOffset, durationMinutes) {
+    function evaluateMatch(startUTC, anchorOffset, durationMinutes, anchorLabel) {
         const activeGroupKeys = [...new Set(Object.values(locationData).map(l => `${l.tz}_${l.offset}`))].filter(k => !chartExclusions.has(k));
         if(!activeGroupKeys.length) return { color: "var(--status-weekend)", isRed: true };
 
@@ -392,9 +393,7 @@
             else {
                 if (tVal >= 22.5 || tVal < 7) isUserRed = true;
                 if (!isUserRed) {
-                    // IMPLICIT 9-17 (INCLUDES LUNCH)
-                    if (tVal >= 9 && tVal < 17) isUserGreen = true; 
-
+                    if ((tVal >= 9 && tVal < 12) || (tVal >= 13.5 && tVal < 17)) isUserGreen = true;
                     if (prefs.has('early') && tVal >= 7 && tVal < 9) isUserGreen = true;
                     if (prefs.has('night') && tVal >= 17 && tVal < 22.5) isUserGreen = true;
                 }
@@ -402,36 +401,69 @@
 
             if (isUserRed) { redFound = true; break; }
             if (isUserGreen) greenCount++;
-            
-            if (isUserGreen) totalScore = 50; 
-            else if (refOffset !== null && !isUserRed) totalScore = (20 - Math.abs(tVal - 13));
         }
         
-        if (redFound) return { color: "var(--status-snooze)", isRed: true, totalScore: -9999 };
-        if (greenCount === totalCount) return { color: "var(--slack-green)", isRed: false, isGreen: true, totalScore };
-        return { color: "var(--status-lunch)", isRed: false, isGreen: false, totalScore };
+        if (redFound) return { color: "var(--status-snooze)", isRed: true, totalScore: -9999, reason: "Some teams are offline" };
+        
+        const isGreen = (greenCount === totalCount);
+        if (isGreen) {
+            totalScore = 50; 
+        } else {
+            const anchorTime = new Date(startUTC + (anchorOffset * 3600000));
+            const anchorH = anchorTime.getUTCHours() + (anchorTime.getUTCMinutes()/60);
+            totalScore = 20 - Math.abs(anchorH - 13);
+            
+            // PENALTY IF ANCHOR IS AT LUNCH
+            if(anchorH >= 12 && anchorH < 13.5) {
+                totalScore -= 5;
+            }
+        }
+
+        const reason = isGreen ? "✅ Everyone is online" : `⭐ Best fit for ${anchorLabel}`;
+
+        return { 
+            color: isGreen ? "var(--slack-green)" : "var(--status-lunch)", 
+            isRed: false, 
+            isGreen: isGreen, 
+            totalScore,
+            reason
+        };
     }
 
     function renderTile(s, container, isSingle) {
         const card = document.createElement('div');
         card.className = isSingle ? 'rec-card selected-card-style' : 'rec-card';
         card.onclick = () => syncAndRender(s.utc); 
-        const refVal = document.getElementById('inputTz').value;
-        let displayTime, displayDate;
         
-        if (refVal === 'local') {
-            const d = new Date(s.utc);
-            displayTime = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
-            displayDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const refVal = document.getElementById('inputTz').value;
+        const durVal = document.getElementById('durVal').value;
+        const durMin = parseInt(durVal);
+        
+        let startD, endD;
+        if(refVal === 'local') {
+            startD = new Date(s.utc);
+            endD = new Date(s.utc + (durMin * 60000));
         } else {
-            const d = new Date(s.utc + (parseFloat(refVal) * 3600000));
-            displayTime = `${d.getUTCHours()}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
-            displayDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+            const off = parseFloat(refVal) * 3600000;
+            startD = new Date(s.utc + off);
+            endD = new Date(s.utc + off + (durMin * 60000));
         }
         
+        const formatTime = (d) => {
+            if(refVal === 'local') return `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
+            return `${d.getUTCHours()}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
+        };
+        const formatDate = (d) => {
+             if(refVal === 'local') return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+             return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
+        };
+
+        const timeRange = `${formatTime(startD)} – ${formatTime(endD)}`;
+
         card.innerHTML = `<span class="rec-tag ${s.isGreen?'tag-green':'tag-yellow'}">${s.isGreen?'MATCH':'ASK'}</span>
-            <div class="rec-time-main"><span>${s.isGreen?'🟢':'🟡'}</span> ${displayTime}</div>
-            <div class="rec-date-sub">${displayDate}</div>
+            <div class="rec-time-main"><span>${s.isGreen?'🟢':'🟡'}</span> ${timeRange}</div>
+            <div class="rec-reason">${s.reason}</div>
+            <div class="rec-date-sub">${formatDate(startD)}</div>
             <div class="rec-list"></div>`;
         
         const list = card.querySelector('.rec-list');
@@ -441,8 +473,11 @@
         const activeGroups = allGroupKeys.filter(k => !chartExclusions.has(k)).map(k => groups[k]);
 
         activeGroups.forEach(loc => {
-            const lt = new Date(s.utc + (loc.offset * 3600000));
-            list.innerHTML += `<div class="rec-row"><span>${loc.tz}</span><span>${lt.getUTCHours()}:${lt.getUTCMinutes().toString().padStart(2,'0')}</span></div>`;
+            const ltStart = new Date(s.utc + (loc.offset * 3600000));
+            const ltEnd = new Date(s.utc + (loc.offset * 3600000) + (durMin * 60000));
+            
+            const fmt = (d) => `${d.getUTCHours()}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
+            list.innerHTML += `<div class="rec-row"><span>${loc.tz}</span><span>${fmt(ltStart)} – ${fmt(ltEnd)}</span></div>`;
         });
         container.appendChild(card);
     }
@@ -481,15 +516,19 @@
         if(durVal === "30") { count = 48; stepMs = 30 * 60000; }
         if(durVal === "90") { count = 16; stepMs = 90 * 60000; }
 
-        const refVal = document.getElementById('inputTz').value;
+        const tzSelect = document.getElementById('inputTz');
+        const refVal = tzSelect.value;
+        const anchorLabel = tzSelect.options[tzSelect.selectedIndex].text.split('(')[0].trim();
+
         let startUTC_MS;
-        let referenceOffset = null; 
+        let anchorOffset = 0; 
+        
         if (refVal === 'local') {
             startUTC_MS = new Date(dS + "T00:00:00").getTime(); 
-            referenceOffset = -1 * (new Date().getTimezoneOffset() / 60);
+            anchorOffset = -1 * (new Date().getTimezoneOffset() / 60);
         } else {
             const refOffset = parseFloat(refVal);
-            referenceOffset = refOffset;
+            anchorOffset = refOffset;
             const neutralDate = new Date(dS + "T00:00:00Z").getTime();
             startUTC_MS = neutralDate - (refOffset * 3600000);
         }
@@ -500,7 +539,7 @@
             if (chartExclusions.has(key)) return; 
             const loc = groups[key];
             const label = `${loc.tz} (${loc.offset >= 0 ? '+' : ''}${loc.offset})`; 
-            if(!tzPreferences[key]) tzPreferences[key] = new Set(); // DEFAULT EMPTY
+            if(!tzPreferences[key]) tzPreferences[key] = new Set(); 
             const prefs = tzPreferences[key];
 
             let tzContainer = `<div class="timezone-row-container">`;
@@ -514,11 +553,10 @@
             }
             timeRow += `</div>`;
 
-            // ONLY 3 TOGGLES
             let pillHtml = `<div class="pref-group">
                 <div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')" title="Early: 07:00-09:00">🌅</div>
                 <div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')" title="Night: 17:00-22:30">🦉</div>
-                <div class="pref-pill ${prefs.has('global')?'global-active':''}" style="margin-left:5px;" onclick="togglePreference('${key}', 'global')" title="Global Flex: 06:00-00:00">🌍</div>
+                <div class="pref-pill ${prefs.has('global')?'global-active':''}" onclick="togglePreference('${key}', 'global')" title="Global Flex: 06:00-00:00">🌍</div>
             </div>`;
 
             let dataRow = `<div class="chart-row"><div class="chart-label"><span>${label}</span>${pillHtml}</div><div class="chart-grid">`;
@@ -526,30 +564,28 @@
             for(let i=0; i<count; i++){
                 const slotUTC = startUTC_MS + (i * stepMs);
                 const localDate = new Date(slotUTC + (loc.offset * 3600000));
-                const tVal = localDate.getUTCHours() + (localDate.getUTCMinutes()/60);
-                const status = getStatus(slotUTC + (loc.offset * 3600000), tVal);
+                const h = localDate.getUTCHours() + (localDate.getUTCMinutes()/60);
+                const status = getStatus(slotUTC + (loc.offset * 3600000), h);
                 let displayEmoji = status.emoji;
                 
                 let isGreen = false;
                 const day = localDate.getUTCDay();
 
-                // VISUAL LOGIC
                 if (day === 0 || day === 6) {
                     isGreen = false; 
                 } else if(prefs.has('global')) { 
-                    if(tVal >= 6 && tVal < 24) isGreen = true; 
+                    if(h>=6 && h<24) isGreen = true; 
                 } else {
-                    if (!(tVal >= 22.5 || tVal < 7)) { // Not Sleep
-                        if (tVal >= 9 && tVal < 17) isGreen = true; // Implicit 9-5
-                        if (prefs.has('early') && tVal >= 7 && tVal < 9) isGreen = true;
-                        if (prefs.has('night') && tVal >= 17 && tVal < 22.5) isGreen = true;
+                    if(!(h>=22.5 || h<7)) {
+                        if(prefs.has('early') && h>=7 && h<9) isGreen = true;
+                        // STD GAP FOR LUNCH 12-1.5
+                        if((h>=9 && h<12)||(h>=13.5 && h<17)) isGreen = true;
+                        if(prefs.has('night') && h>=17 && h<22.5) isGreen = true;
                     }
                 }
-                if (isGreen) displayEmoji = "💻";
-                
-                let highlightClass = "";
-                if (isFitMode && workDateUTC_MS === slotUTC) highlightClass = "highlight-slot";
-                dataRow += `<div class="chart-box ${highlightClass}" style="background:#f4f4f4; border:1px solid #e0e0e0; font-size:0.8rem;">${displayEmoji}</div>`;
+                const highlightClass = (isFitMode && workDateUTC_MS === slotUTC) ? "highlight-slot" : "";
+                const content = isGreen ? "💻" : displayEmoji;
+                dataRow += `<div class="chart-box ${highlightClass}" style="background:#f4f4f4; border:1px solid #e0e0e0; font-size:0.8rem;">${content}</div>`;
             }
             dataRow += `</div></div>`;
             tzContainer += timeRow + dataRow + `</div>`;
@@ -560,7 +596,7 @@
         const g = document.getElementById('m-grid');
         for(let i=0; i<count; i++){
             const slotUTC = startUTC_MS + (i * stepMs);
-            const data = evaluateMatch(slotUTC, referenceOffset, durationMinutes);
+            const data = evaluateMatch(slotUTC, anchorOffset, durationMinutes, anchorLabel);
             allProcessedSlots.push({ utc: slotUTC, ...data });
             const box = document.createElement('div');
             box.className = 'chart-box';
@@ -575,8 +611,8 @@
         const sortedRecs = allProcessedSlots.filter(r => !r.isRed).sort((a,b) => {
             if (a.isGreen && !b.isGreen) return -1;
             if (!a.isGreen && b.isGreen) return 1;
-            if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
-            return a.utc - b.utc;
+            if (a.isGreen) return a.utc - b.utc;
+            return b.totalScore - a.totalScore;
         }).slice(0, 3);
         
         if(sortedRecs.length > 0) sortedRecs.forEach(s => renderTile(s, recContainer, false));
@@ -628,7 +664,7 @@
                     groups[groupKey].cities.push(name);
                 });
 
-                Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(key => { // FIXED SORTING
+                Object.keys(groups).sort((a,b) => groups[b].offset - groups[a].offset).forEach(key => { 
                     const g = groups[key];
                     const local = new Date(refMS + (g.offset * 3600000));
                     const dateStr = local.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }); 
