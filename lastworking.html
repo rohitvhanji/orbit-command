@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Orbit | Precision Scheduling</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <style>
         :root {
             --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
@@ -31,6 +32,8 @@
         .btn-main { width: 100%; border: none; padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-login { background: var(--slack-purple); color: white; }
         .btn-signup { background: var(--slack-green); color: white; }
+        .guest-link { margin-top: 10px; color: #666; font-size: 0.9rem; cursor: pointer; text-decoration: underline; }
+        .guest-link:hover { color: var(--slack-purple); font-weight: 700; }
 
         #app-shell { display: flex; height: 100%; width: 100%; }
         #sidebar { width: 340px; background: var(--slack-purple); color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.1); }
@@ -144,6 +147,7 @@
             <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
             <button class="btn-main btn-login" onclick="handleAuth('login')">Enter Orbit</button>
             <button class="btn-main btn-signup" onclick="handleAuth('signup')">Start Your Orbit</button>
+            <div class="guest-link" onclick="enableGuestMode()">Skip login & try as guest -></div>
             <div id="auth-status" style="color:red; font-size:0.8rem; margin-top:5px;"></div>
         </div>
     </div>
@@ -158,7 +162,10 @@
 
 <div id="app-shell">
     <aside id="sidebar">
-        <div class="sidebar-header"><h2>ORBIT</h2><span onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span></div>
+        <div class="sidebar-header">
+            <h2>ORBIT</h2>
+            <span id="logout-btn" onclick="logout()" style="cursor:pointer; font-size:0.7rem; opacity:0.6; text-decoration:underline;">Logout</span>
+        </div>
         <div class="mgmt-section">
             <input type="text" id="cityInput" class="mgmt-input" placeholder="City name...">
             <button id="addCityBtn" class="btn-main btn-login" style="padding:10px; font-size:0.8rem;" onclick="lookupCity()">ADD OFFICE</button>
@@ -224,9 +231,17 @@
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://xcdnyheqtagizlcyzuzb.supabase.co'; 
-    const SUPABASE_KEY = 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh'; 
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // AUTO-FALLBACK CONFIG FOR TESTING
+    if (typeof CONFIG === 'undefined') {
+        window.CONFIG = {
+            SUPABASE_URL: 'https://xcdnyheqtagizlcyzuzb.supabase.co',
+            SUPABASE_KEY: 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh',
+            TIMEZONEDB_KEY: 'VW4CCUCGOI2M'
+        };
+        console.warn('Using Hardcoded Config Fallback');
+    }
+
+    const _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
     let locationData = {}; let team = [];
     let isFitMode = false; let isMatchViewActive = false;
@@ -234,6 +249,7 @@
     let chartExclusions = new Set();
     let tzPreferences = {}; 
     let manualSelectionSlot = null;
+    let isGuestMode = false;
 
     async function handleAuth(type) {
         const email = document.getElementById('auth-email').value;
@@ -241,35 +257,104 @@
         const { error } = type === 'login' ? await _supabase.auth.signInWithPassword({ email, password }) : await _supabase.auth.signUp({ email, password });
         if (error) document.getElementById('auth-status').innerText = error.message; else checkSession();
     }
+    
     async function checkSession() {
         const { data: { session } } = await _supabase.auth.getSession();
-        if (session) { document.getElementById('auth-overlay').style.display = 'none'; loadData(); }
+        if (session) { 
+            isGuestMode = false;
+            document.getElementById('logout-btn').innerText = "Logout";
+            document.getElementById('auth-overlay').style.display = 'none'; 
+            loadData(); 
+        }
     }
-    async function logout() { await _supabase.auth.signOut(); location.reload(); }
+
+    function enableGuestMode() {
+        isGuestMode = true;
+        document.getElementById('logout-btn').innerText = "☁️ Login to Save";
+        document.getElementById('auth-overlay').style.display = 'none';
+        loadData();
+    }
+
+    async function logout() { 
+        if(isGuestMode) {
+            location.reload(); 
+        } else {
+            await _supabase.auth.signOut(); 
+            location.reload(); 
+        }
+    }
+
+    function saveToLocal() {
+        if(!isGuestMode) return;
+        const data = {
+            locations: Object.values(locationData).map(l => ({ name: l.name || Object.keys(locationData).find(k => locationData[k] === l), ...l })),
+            team: team,
+            prefs: Array.from(Object.entries(tzPreferences)).map(([k, v]) => [k, Array.from(v)])
+        };
+        localStorage.setItem('orbit_guest_data', JSON.stringify(data));
+    }
 
     async function loadData() {
         try {
-            const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) return;
-            let { data: locs } = await _supabase.from('locations').select('*');
-            if (!locs || locs.length === 0) {
-                const defaults = [
-                    { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST', user_id: user.id },
-                    { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.0, utc_offset: -5, tz: 'EST', user_id: user.id },
-                    { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.4, utc_offset: -8, tz: 'PST', user_id: user.id }
-                ];
-                await _supabase.from('locations').insert(defaults);
-                const { data: nl } = await _supabase.from('locations').select('*');
-                locs = nl;
+            let locs = [], members = [];
+            
+            if(isGuestMode) {
+                const local = localStorage.getItem('orbit_guest_data');
+                if(local) {
+                    const parsed = JSON.parse(local);
+                    locs = parsed.locations;
+                    members = parsed.team;
+                    if(parsed.prefs) {
+                        parsed.prefs.forEach(([k, v]) => tzPreferences[k] = new Set(v));
+                    }
+                } else {
+                    locs = [
+                        { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST' },
+                        { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.00, utc_offset: -5, tz: 'EST' },
+                        { name: 'Chicago', code: 'CHI', lat: 41.87, lon: -87.62, utc_offset: -6, tz: 'CST' },
+                        { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.41, utc_offset: -8, tz: 'PST' }
+                    ];
+                    members = [
+                        { id: 'g1', name: 'Ravi', location_name: 'Bengaluru' },
+                        { id: 'g2', name: 'Sarah', location_name: 'New York' },
+                        { id: 'g3', name: 'Mike', location_name: 'Chicago' },
+                        { id: 'g4', name: 'Chen', location_name: 'San Francisco' }
+                    ];
+                    locationData = {};
+                    locs.forEach(l => {
+                        const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                        locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: l.lon, lat: l.lat, name: l.name };
+                    });
+                    team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
+                    saveToLocal();
+                }
+            } else {
+                const { data: { user } } = await _supabase.auth.getUser();
+                if (!user) return;
+                const { data: dbLocs } = await _supabase.from('locations').select('*');
+                locs = dbLocs || [];
+                if (locs.length === 0) {
+                    const defaults = [
+                        { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST', user_id: user.id },
+                        { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.0, utc_offset: -5, tz: 'EST', user_id: user.id },
+                        { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.4, utc_offset: -8, tz: 'PST', user_id: user.id }
+                    ];
+                    await _supabase.from('locations').insert(defaults);
+                    const { data: nl } = await _supabase.from('locations').select('*');
+                    locs = nl;
+                }
+                const { data: dbMems } = await _supabase.from('teammates').select('*');
+                members = dbMems || [];
             }
-            const { data: members } = await _supabase.from('teammates').select('*');
+
             locationData = {};
-            if(locs) locs.forEach(l => { 
-                locationData[l.name] = { code: l.code, offset: l.utc_offset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat) }; 
-                const key = `${l.tz}_${l.utc_offset}`;
+            locs.forEach(l => { 
+                const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
+                const key = `${l.tz}_${valOffset}`;
                 if(!tzPreferences[key]) tzPreferences[key] = new Set();
             });
-            team = members ? members.map(m => ({ id: m.id, name: m.name, loc: m.location_name })) : [];
+            team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
             populateLocDropdown(); populateTzDropdown(); render();
         } catch(e) { console.error(e); }
     }
@@ -302,18 +387,25 @@
     }
 
     async function confirmAndAddCity(geo) {
-        const apiKey = 'VW4CCUCGOI2M';
         try {
-            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`).then(r => r.json());
+            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${CONFIG.TIMEZONEDB_KEY}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`).then(r => r.json());
             if(tzR.status === 'OK') {
-                const { data: { user } } = await _supabase.auth.getUser();
-                await _supabase.from('locations').upsert({ 
+                const newLoc = { 
                     name: geo.display_name.split(',')[0], code: geo.display_name.substring(0,3).toUpperCase(), 
-                    lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation, user_id: user.id 
-                });
-                const key = `${tzR.abbreviation}_${tzR.gmtOffset/3600}`;
-                if(!tzPreferences[key]) tzPreferences[key] = new Set();
-                loadData();
+                    lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation 
+                };
+
+                if(isGuestMode) {
+                    locationData[newLoc.name] = { ...newLoc, offset: newLoc.utc_offset };
+                    const key = `${newLoc.tz}_${newLoc.utc_offset}`;
+                    if(!tzPreferences[key]) tzPreferences[key] = new Set();
+                    saveToLocal();
+                    populateLocDropdown(); populateTzDropdown(); render();
+                } else {
+                    const { data: { user } } = await _supabase.auth.getUser();
+                    await _supabase.from('locations').upsert({ ...newLoc, user_id: user.id });
+                    loadData();
+                }
             }
         } catch(e) {}
     }
@@ -322,13 +414,43 @@
         const n = document.getElementById('newName').value.trim();
         const l = document.getElementById('newLoc').value;
         if (!n || !l) return;
-        const { data: { user } } = await _supabase.auth.getUser();
-        await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
-        loadData();
+        
+        if(isGuestMode) {
+            team.push({ id: 'g' + Date.now(), name: n, loc: l });
+            saveToLocal();
+            render();
+        } else {
+            const { data: { user } } = await _supabase.auth.getUser();
+            await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
+            loadData();
+        }
+        document.getElementById('newName').value = '';
     }
 
-    async function removeLocation(n) { if(confirm(`Delete ${n}?`)) { await _supabase.from('locations').delete().eq('name', n); loadData(); } }
-    async function removeMember(id) { await _supabase.from('teammates').delete().eq('id', id); loadData(); }
+    async function removeLocation(n) { 
+        if(confirm(`Delete ${n}?`)) { 
+            if(isGuestMode) {
+                delete locationData[n];
+                team = team.filter(m => m.loc !== n);
+                saveToLocal();
+                populateLocDropdown(); populateTzDropdown(); render();
+            } else {
+                await _supabase.from('locations').delete().eq('name', n); 
+                loadData(); 
+            }
+        } 
+    }
+    
+    async function removeMember(id) { 
+        if(isGuestMode) {
+            team = team.filter(m => m.id !== id);
+            saveToLocal();
+            render();
+        } else {
+            await _supabase.from('teammates').delete().eq('id', id); 
+            loadData(); 
+        }
+    }
 
     function populateLocDropdown() {
         const sel = document.getElementById('newLoc'); sel.innerHTML = '';
@@ -346,6 +468,7 @@
             if (prefs.has(type)) prefs.delete(type);
             else prefs.add(type);
         }
+        if(isGuestMode) saveToLocal();
         buildMatchChart();
     }
 
@@ -719,6 +842,13 @@
             const px = (d.lon + 180) * 2.222; const py = (90 - d.lat) * 2.222;
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); markers.appendChild(dot);
+            
+            // Re-added City Code Label
+            const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            txt.setAttribute("x", px + 6); txt.setAttribute("y", py + 3);
+            txt.setAttribute("class", "pin-lbl");
+            txt.textContent = d.code;
+            markers.appendChild(txt);
         });
     }
 
@@ -736,3 +866,5 @@
 </script>
 </body>
 </html>
+
+```
