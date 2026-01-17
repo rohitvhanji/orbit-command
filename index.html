@@ -231,9 +231,14 @@
 </div>
 
 <script>
+    // AUTO-FALLBACK CONFIG FOR TESTING
     if (typeof CONFIG === 'undefined') {
-        console.error('CONFIG is missing. Please create config.js with SUPABASE_URL, SUPABASE_KEY, and TIMEZONEDB_KEY.');
-        alert('Configuration missing: Create config.js');
+        window.CONFIG = {
+            SUPABASE_URL: 'https://xcdnyheqtagizlcyzuzb.supabase.co',
+            SUPABASE_KEY: 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh',
+            TIMEZONEDB_KEY: 'VW4CCUCGOI2M'
+        };
+        console.warn('Using Hardcoded Config Fallback');
     }
 
     const _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
@@ -279,7 +284,6 @@
         }
     }
 
-    // Helper for Local Storage persistence
     function saveToLocal() {
         if(!isGuestMode) return;
         const data = {
@@ -304,7 +308,6 @@
                         parsed.prefs.forEach(([k, v]) => tzPreferences[k] = new Set(v));
                     }
                 } else {
-                    // SEED DEFAULTS FOR GUESTS
                     locs = [
                         { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST' },
                         { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.00, utc_offset: -5, tz: 'EST' },
@@ -317,9 +320,11 @@
                         { id: 'g3', name: 'Mike', location_name: 'Chicago' },
                         { id: 'g4', name: 'Chen', location_name: 'San Francisco' }
                     ];
-                    // Save initial defaults so they persist
                     locationData = {};
-                    locs.forEach(l => locationData[l.name] = { code: l.code, offset: l.utc_offset, tz: l.tz, lon: l.lon, lat: l.lat, name: l.name });
+                    locs.forEach(l => {
+                        const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                        locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: l.lon, lat: l.lat, name: l.name };
+                    });
                     team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
                     saveToLocal();
                 }
@@ -328,7 +333,6 @@
                 if (!user) return;
                 const { data: dbLocs } = await _supabase.from('locations').select('*');
                 locs = dbLocs || [];
-                // If DB empty, seed defaults
                 if (locs.length === 0) {
                     const defaults = [
                         { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST', user_id: user.id },
@@ -345,8 +349,9 @@
 
             locationData = {};
             locs.forEach(l => { 
-                locationData[l.name] = { code: l.code, offset: l.utc_offset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
-                const key = `${l.tz}_${l.utc_offset}`;
+                const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
+                const key = `${l.tz}_${valOffset}`;
                 if(!tzPreferences[key]) tzPreferences[key] = new Set();
             });
             team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
@@ -426,7 +431,6 @@
         if(confirm(`Delete ${n}?`)) { 
             if(isGuestMode) {
                 delete locationData[n];
-                // Remove members in that location
                 team = team.filter(m => m.loc !== n);
                 saveToLocal();
                 populateLocDropdown(); populateTzDropdown(); render();
@@ -839,7 +843,7 @@
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); markers.appendChild(dot);
             
-            // DRAW CITY CODE LABEL
+            // Re-added City Code Label
             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
             txt.setAttribute("x", px + 6); txt.setAttribute("y", py + 3);
             txt.setAttribute("class", "pin-lbl");
