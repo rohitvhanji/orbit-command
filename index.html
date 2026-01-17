@@ -1,3 +1,22 @@
+Here is the final code.
+
+### 🛠️ Final Implementation Details
+
+1. **Prioritization Tiers:**
+* **Tier 1 (Score 1000):** Green Matches (Everyone online).
+* **Tier 2 (Score 500):** Yellow Matches where **You (Anchor)** are working.
+* **Tier 3 (Score 100):** Yellow Matches where **You (Anchor)** are at **Lunch**.
+
+
+2. **Sorting Rule:** Within each tier, results are strictly sorted by **Earliest Time First**.
+3. **Reason Text:**
+* **Green:** `"✅ Everyone is online"`
+* **Yellow (Work):** `"⭐ Earliest available for [Timezone]"`
+* **Yellow (Lunch):** `"⚠️ During lunch hours"`
+
+
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -736,3 +755,5 @@
 </script>
 </body>
 </html>
+
+```
