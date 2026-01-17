@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Orbit | Precision Scheduling</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <style>
         :root {
             --slack-purple: #4A154B; --slack-navy: #3F0E40; --slack-blue: #1264A3;
@@ -224,9 +225,13 @@
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://xcdnyheqtagizlcyzuzb.supabase.co'; 
-    const SUPABASE_KEY = 'sb_publishable_5cH3NNSKN1knnkm6ZMvggw_6RQdq9Nh'; 
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // CONFIG is loaded from config.js
+    if (typeof CONFIG === 'undefined') {
+        console.error('CONFIG is missing. Please create config.js with SUPABASE_URL, SUPABASE_KEY, and TIMEZONEDB_KEY.');
+        alert('Configuration missing: Create config.js');
+    }
+
+    const _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
     let locationData = {}; let team = [];
     let isFitMode = false; let isMatchViewActive = false;
@@ -302,9 +307,8 @@
     }
 
     async function confirmAndAddCity(geo) {
-        const apiKey = 'VW4CCUCGOI2M';
         try {
-            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${apiKey}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`).then(r => r.json());
+            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${CONFIG.TIMEZONEDB_KEY}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`).then(r => r.json());
             if(tzR.status === 'OK') {
                 const { data: { user } } = await _supabase.auth.getUser();
                 await _supabase.from('locations').upsert({ 
@@ -415,11 +419,13 @@
             const anchorTime = new Date(startUTC + (anchorOffset * 3600000));
             const anchorH = anchorTime.getUTCHours() + (anchorTime.getUTCMinutes()/60);
             
+            // TIER 3: Lunch
             if (anchorH >= 12 && anchorH < 13.5) {
-                totalScore = 100; // Penalized (Lunch)
+                totalScore = 100; 
                 reason = "⚠️ During lunch hours";
             } else {
-                totalScore = 500; // Standard Yellow
+                // TIER 2: Work (No matter how early or late, just strictly earlier is better)
+                totalScore = 500; 
                 reason = `⭐ Earliest available for ${anchorLabel}`;
             }
         }
