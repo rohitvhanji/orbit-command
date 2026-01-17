@@ -62,8 +62,8 @@
         .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
         .scrollable-body { flex-grow: 1; overflow-y: auto; padding: 20px 30px 40px 30px; }
         .chart-centered-content { max-width: 1400px; margin: 0 auto; }
-        .chart-controls { display: flex; align-items: center; gap: 20px; }
-        .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; }
+        .chart-controls { display: flex; align-items: center; gap: 10px; } 
+        .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; margin-right: 15px; }
         .legend-item { display: flex; align-items: center; gap: 5px; }
         .legend-box { width: 12px; height: 12px; border-radius: 2px; }
         
@@ -128,9 +128,14 @@
         .city-sub { font-size: 0.8rem; color: #666; margin-left: 28px; }
         .close-modal { cursor: pointer; font-size: 1.2rem; opacity: 0.7; }
         .close-modal:hover { opacity: 1; }
+        
+        #share-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--slack-navy); color: white; padding: 10px 20px; border-radius: 30px; font-weight: 700; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 5000; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+        #share-toast.show { opacity: 1; top: 40px; }
     </style>
 </head>
 <body>
+
+<div id="share-toast"><span>🔗 Link Copied to Clipboard!</span></div>
 
 <div id="auth-overlay">
     <div class="bg-mesh"></div>
@@ -192,6 +197,9 @@
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-lunch)"></div> Ask</div>
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-snooze)"></div> Sleep</div>
                             </div>
+                            <button onclick="shareDashboard()" style="padding:10px 15px; background:white; color:var(--slack-blue); border:1px solid var(--slack-border); border-radius:4px; cursor:pointer; font-weight:700; display:flex; align-items:center; gap:5px;">
+                                🔗 Share Link
+                            </button>
                             <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
                         </div>
                     </div>
@@ -231,7 +239,6 @@
 </div>
 
 <script>
-    // AUTO-FALLBACK CONFIG FOR TESTING
     if (typeof CONFIG === 'undefined') {
         window.CONFIG = {
             SUPABASE_URL: 'https://xcdnyheqtagizlcyzuzb.supabase.co',
@@ -259,6 +266,12 @@
     }
     
     async function checkSession() {
+        const params = new URLSearchParams(window.location.search);
+        if(params.has('share')) {
+            loadSharedState(params.get('share'));
+            return;
+        }
+
         const { data: { session } } = await _supabase.auth.getSession();
         if (session) { 
             isGuestMode = false;
@@ -284,6 +297,55 @@
         }
     }
 
+    function shareDashboard() {
+        const payload = {
+            d: document.getElementById('schedDate').value,
+            dur: document.getElementById('durVal').value,
+            ref: document.getElementById('inputTz').value,
+            locs: locationData,
+            team: team, 
+            pref: Array.from(Object.entries(tzPreferences)).map(([k, v]) => [k, Array.from(v)])
+        };
+        const encoded = encodeURIComponent(JSON.stringify(payload));
+        const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`;
+        
+        navigator.clipboard.writeText(url).then(() => {
+            const t = document.getElementById('share-toast');
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        });
+    }
+
+    function loadSharedState(encodedStr) {
+        try {
+            const data = JSON.parse(decodeURIComponent(encodedStr));
+            isGuestMode = true; 
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('logout-btn').innerText = "🔗 Shared View";
+            
+            locationData = data.locs || {};
+            team = data.team || [];
+            if(data.pref) {
+                data.pref.forEach(([k, v]) => tzPreferences[k] = new Set(v));
+            }
+            
+            document.getElementById('schedDate').value = data.d;
+            document.getElementById('durVal').value = data.dur;
+            
+            populateLocDropdown(); 
+            populateTzDropdown(); 
+            
+            if(data.ref) document.getElementById('inputTz').value = data.ref;
+
+            render();
+            buildMatchChart(); 
+        } catch(e) {
+            console.error("Share parse error", e);
+            alert("Invalid Share Link");
+            enableGuestMode();
+        }
+    }
+
     function saveToLocal() {
         if(!isGuestMode) return;
         const data = {
@@ -300,14 +362,22 @@
             
             if(isGuestMode) {
                 const local = localStorage.getItem('orbit_guest_data');
+                let useDefaults = true;
+
                 if(local) {
                     const parsed = JSON.parse(local);
-                    locs = parsed.locations;
-                    members = parsed.team;
-                    if(parsed.prefs) {
-                        parsed.prefs.forEach(([k, v]) => tzPreferences[k] = new Set(v));
+                    // FIXED: Checks if locations array is empty. If so, fallback to defaults.
+                    if (parsed.locations && parsed.locations.length > 0) {
+                        locs = parsed.locations;
+                        members = parsed.team;
+                        if(parsed.prefs) {
+                            parsed.prefs.forEach(([k, v]) => tzPreferences[k] = new Set(v));
+                        }
+                        useDefaults = false;
                     }
-                } else {
+                }
+                
+                if (useDefaults) {
                     locs = [
                         { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST' },
                         { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.00, utc_offset: -5, tz: 'EST' },
@@ -320,6 +390,7 @@
                         { id: 'g3', name: 'Mike', location_name: 'Chicago' },
                         { id: 'g4', name: 'Chen', location_name: 'San Francisco' }
                     ];
+                    // Save immediately so subsequent reloads are consistent
                     locationData = {};
                     locs.forEach(l => {
                         const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
@@ -327,8 +398,20 @@
                     });
                     team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
                     saveToLocal();
+                } else {
+                    // Populate locationData from local storage parsing result
+                    locationData = {};
+                    locs.forEach(l => {
+                        const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                        locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: l.lon, lat: l.lat, name: l.name };
+                        const key = `${l.tz}_${valOffset}`;
+                        if(!tzPreferences[key]) tzPreferences[key] = new Set();
+                    });
+                    team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
                 }
+
             } else {
+                // LOGGED IN USER LOGIC
                 const { data: { user } } = await _supabase.auth.getUser();
                 if (!user) return;
                 const { data: dbLocs } = await _supabase.from('locations').select('*');
@@ -345,16 +428,17 @@
                 }
                 const { data: dbMems } = await _supabase.from('teammates').select('*');
                 members = dbMems || [];
+                
+                locationData = {};
+                locs.forEach(l => { 
+                    const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                    locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
+                    const key = `${l.tz}_${valOffset}`;
+                    if(!tzPreferences[key]) tzPreferences[key] = new Set();
+                });
+                team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
             }
 
-            locationData = {};
-            locs.forEach(l => { 
-                const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
-                locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
-                const key = `${l.tz}_${valOffset}`;
-                if(!tzPreferences[key]) tzPreferences[key] = new Set();
-            });
-            team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
             populateLocDropdown(); populateTzDropdown(); render();
         } catch(e) { console.error(e); }
     }
@@ -843,7 +927,6 @@
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); markers.appendChild(dot);
             
-            // Re-added City Code Label
             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
             txt.setAttribute("x", px + 6); txt.setAttribute("y", py + 3);
             txt.setAttribute("class", "pin-lbl");
@@ -866,5 +949,3 @@
 </script>
 </body>
 </html>
-
-```
