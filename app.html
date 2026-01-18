@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="config.js"></script>
     <style>
         :root {
@@ -79,24 +80,27 @@
         }
         .header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; }
         
-        .header-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         
-        .btn-how-to {
-            background: #EEF2FF; 
-            color: var(--accent-primary); 
-            padding: 8px 14px; 
+        .btn-header {
+            padding: 6px 12px; 
             border-radius: 8px; 
             font-weight: 700; 
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             cursor: pointer;
             transition: 0.2s;
-            border: 1px solid #C7D2FE;
+            border: 1px solid var(--border-subtle);
+            background: white;
+            color: var(--text-muted);
             display: flex; align-items: center; gap: 5px;
         }
-        .btn-how-to:hover { background: #E0E7FF; transform: translateY(-1px); }
+        .btn-header:hover { border-color: var(--accent-primary); color: var(--accent-primary); background: #F8FAFC; }
+        
+        .btn-how-to { background: #EEF2FF; color: var(--accent-primary); border-color: #C7D2FE; }
+        .btn-how-to:hover { background: #E0E7FF; }
 
         #logout-btn { 
-            font-size: 0.75rem; color: var(--text-muted); font-weight: 600; cursor: pointer; text-decoration: underline; 
+            font-size: 0.75rem; color: var(--text-muted); font-weight: 600; cursor: pointer; text-decoration: underline; margin-left: auto;
         }
 
         #guest-note {
@@ -375,13 +379,49 @@
         
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; stroke: #020617; stroke-width: 3px; paint-order: stroke; }
         .grid-line { stroke: rgba(255,255,255,0.6); stroke-width: 2px; stroke-dasharray: 4; }
+        
+        .feedback-input {
+            width: 100%; padding: 12px; border-radius: 10px;
+            border: 1px solid var(--border-subtle); background: #F8FAFC;
+            font-family: inherit; font-size: 0.9rem; color: var(--text-main);
+            margin-bottom: 15px; outline: none; transition: 0.2s;
+        }
+        .feedback-input:focus { border-color: var(--accent-primary); background: white; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        .feedback-textarea {
+            width: 100%; height: 120px; padding: 12px; border-radius: 10px;
+            border: 1px solid var(--border-subtle); background: #F8FAFC;
+            resize: none; font-family: inherit; font-size: 0.9rem; color: var(--text-main);
+            margin-bottom: 15px; outline: none; transition: 0.2s;
+        }
+        .feedback-textarea:focus { border-color: var(--accent-primary); background: white; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
     </style>
 </head>
 <body>
 
 <div id="share-toast"><span>🔗 Link Copied to Clipboard!</span></div>
 
-<div id="city-modal" class="modal-overlay"><div class="modal-content"><div class="modal-header"><span>Select Location</span><span onclick="document.getElementById('city-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div><div class="modal-body" id="modal-list" style="padding:10px;"></div></div></div>
+<div id="city-modal" class="modal-overlay"><div class="modal-content" style="max-width:450px;"><div class="modal-header"><span>Select Location</span><span onclick="document.getElementById('city-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div><div class="modal-body" id="modal-list" style="padding:10px;"></div></div></div>
+
+<div id="feedback-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header"><span>Contact Us</span><span onclick="document.getElementById('feedback-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div>
+        <div class="modal-body" style="padding:20px;">
+            <p style="margin-bottom:15px; font-size:0.9rem;">Have a feature request or found a bug? Let me know directly.</p>
+            
+            <select id="feedback-type" class="feedback-input">
+                <option value="General Feedback">General Feedback</option>
+                <option value="Feature Request">Feature Request</option>
+                <option value="Bug Report">Bug Report</option>
+            </select>
+            
+            <input type="email" id="feedback-email" class="feedback-input" placeholder="Your Email Address">
+            
+            <textarea id="feedback-text" class="feedback-textarea" placeholder="Type your message here..."></textarea>
+            
+            <button id="send-feedback-btn" class="btn-main btn-login" onclick="sendFeedback()">SEND MESSAGE</button>
+        </div>
+    </div>
+</div>
 
 <div id="faq-modal" class="modal-overlay">
     <div class="modal-content">
@@ -425,7 +465,7 @@
                     <div style="margin-top: 8px; display: grid; gap: 5px;">
                         <div><span class="icon-inline">🌅</span> <strong>Early Bird:</strong> Adds 7am - 9am availability.</div>
                         <div><span class="icon-inline">🦉</span> <strong>Night Owl:</strong> Adds 5pm - 10:30pm availability.</div>
-                        <div><span class="icon-inline">🌍</span> <strong>Global Flex:</strong> Makes that zone available 12 hours.</div>
+                        <div><span class="icon-inline">🌍</span> <strong>Global Flex:</strong> Makes that zone available 24 hours.</div>
                     </div>
                 </div>
             </div>
@@ -467,8 +507,11 @@
                 </div>
             </div>
             <div class="header-actions">
-                <div class="btn-how-to" onclick="document.getElementById('faq-modal').style.display='flex'">
+                <div class="btn-header btn-how-to" onclick="document.getElementById('faq-modal').style.display='flex'">
                     <span>💡 How to use</span>
+                </div>
+                <div class="btn-header" onclick="document.getElementById('feedback-modal').style.display='flex'">
+                    <span>Contact Us</span>
                 </div>
                 <span id="logout-btn" onclick="logout()">Logout</span>
             </div>
@@ -536,17 +579,47 @@
 
     let locationData = {}; let team = []; let isFitMode = false; let isMatchViewActive = true; let workDateUTC_MS = Date.now(); let chartExclusions = new Set(); let tzPreferences = {}; let manualSelectionSlot = null; let isGuestMode = false;
 
+    // EMAILJS INITIALIZATION
+    if(CONFIG.EMAILJS_PUBLIC_KEY) {
+        emailjs.init(CONFIG.EMAILJS_PUBLIC_KEY);
+    }
+
+    function sendFeedback() {
+        const type = document.getElementById('feedback-type').value;
+        const email = document.getElementById('feedback-email').value;
+        const msg = document.getElementById('feedback-text').value;
+        const btn = document.getElementById('send-feedback-btn');
+        
+        if(!msg.trim()) { alert("Please enter a message."); return; }
+        if(!email.trim()) { alert("Please enter your email so we can reply."); return; }
+        
+        btn.innerText = "SENDING...";
+        
+        // Pass Type and From Email to template
+        emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID, { 
+            type: type,
+            from_email: email,
+            message: msg 
+        })
+        .then(() => {
+            btn.innerText = "SENT!";
+            setTimeout(() => { 
+                document.getElementById('feedback-modal').style.display='none'; 
+                document.getElementById('feedback-text').value = '';
+                document.getElementById('feedback-email').value = '';
+                btn.innerText = "SEND MESSAGE";
+            }, 1500);
+        }, (err) => {
+            btn.innerText = "ERROR";
+            console.error(err);
+            alert("Failed to send. Please try again.");
+        });
+    }
+
     async function checkSession() { 
         const params = new URLSearchParams(window.location.search); 
-        // 1. Check for SHARE param
-        if(params.has('share')) { 
-            loadSharedState(params.get('share')); 
-            return; 
-        } 
-        
-        // 2. Only if NOT sharing, default date to today
+        if(params.has('share')) { loadSharedState(params.get('share')); return; } 
         document.getElementById('schedDate').valueAsDate = new Date();
-
         const { data: { session } } = await _supabase.auth.getSession(); 
         if (session) { 
             isGuestMode = false; 
