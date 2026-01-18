@@ -44,6 +44,20 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             display: inline-block;
+            cursor: pointer;
+        }
+        
+        .beta-tag {
+            font-size: 0.6rem; 
+            font-weight: 800; 
+            color: #B45309; 
+            background: #FEF3C7; 
+            padding: 2px 6px; 
+            border-radius: 6px; 
+            vertical-align: middle; 
+            margin-left: 8px; 
+            letter-spacing: 0.5px;
+            border: 1px solid #FDE68A;
         }
 
         #app-shell { display: flex; height: 100%; width: 100%; min-width: 1280px; }
@@ -59,15 +73,37 @@
         }
         
         .sidebar-header { 
-            padding: 24px; 
+            padding: 24px 24px 15px 24px; 
             background: var(--bg-surface); 
             display: flex; flex-direction: column; flex-shrink: 0; 
         }
-        .header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; }
         
-        #guest-note {
-            font-size: 0.65rem; color: #EF4444; font-weight: 600; margin-top: 4px; text-align: right; display: none;
+        .header-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        
+        .btn-how-to {
+            background: #EEF2FF; 
+            color: var(--accent-primary); 
+            padding: 8px 14px; 
+            border-radius: 8px; 
+            font-weight: 700; 
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #C7D2FE;
+            display: flex; align-items: center; gap: 5px;
         }
+        .btn-how-to:hover { background: #E0E7FF; transform: translateY(-1px); }
+
+        #logout-btn { 
+            font-size: 0.75rem; color: var(--text-muted); font-weight: 600; cursor: pointer; text-decoration: underline; 
+        }
+
+        #guest-note {
+            font-size: 0.75rem; color: #EF4444; font-weight: 600; margin-top: 10px; text-align: center; display: none;
+            background: #FEF2F2; padding: 6px 10px; border-radius: 6px; border: 1px solid #FECACA;
+        }
+        #guest-note a { color: #B91C1C; text-decoration: underline; cursor: pointer; margin-left: 5px; }
 
         .mgmt-section { padding: 12px 20px; border-bottom: 1px solid var(--border-subtle); }
         
@@ -321,18 +357,23 @@
         ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
         ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-        #city-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 3000; align-items: center; justify-content: center; }
-        .modal-content { background: white; width: 90%; max-width: 450px; max-height: 80vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 3000; align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 95%; max-width: 850px; max-height: 90vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
         .modal-header { padding: 20px; background: white; color: var(--text-main); font-weight: 800; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); }
-        .modal-body { padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+        .modal-body { padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
         .city-option { padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; text-align: left; display: flex; flex-direction: column; gap: 2px; }
         .city-option:hover { background: #F8FAFC; color: var(--accent-primary); }
+        
+        .faq-step { display: flex; gap: 20px; align-items: flex-start; }
+        .faq-num { flex-shrink:0; width: 28px; height: 28px; background: var(--text-main); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; margin-top: 2px; }
+        .faq-text strong { color: var(--text-main); display: block; margin-bottom: 4px; font-size: 1rem; }
+        .faq-divider { height: 1px; background: var(--border-subtle); margin: 5px 0; }
+        .icon-inline { font-size: 1.1em; vertical-align: middle; margin-right: 4px; }
 
         #share-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--text-main); color: white; padding: 12px 30px; border-radius: 40px; font-weight: 600; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); z-index: 5000; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
         #share-toast.show { opacity: 1; top: 40px; }
         
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; stroke: #020617; stroke-width: 3px; paint-order: stroke; }
-        
         .grid-line { stroke: rgba(255,255,255,0.6); stroke-width: 2px; stroke-dasharray: 4; }
     </style>
 </head>
@@ -340,16 +381,98 @@
 
 <div id="share-toast"><span>🔗 Link Copied to Clipboard!</span></div>
 
-<div id="city-modal" style="display:none;"><div class="modal-content"><div class="modal-header"><span>Select Location</span><span onclick="closeModal()" style="cursor:pointer; color:#94A3B8;">✕</span></div><div class="modal-body" id="modal-list"></div></div></div>
+<div id="city-modal" class="modal-overlay"><div class="modal-content"><div class="modal-header"><span>Select Location</span><span onclick="document.getElementById('city-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div><div class="modal-body" id="modal-list" style="padding:10px;"></div></div></div>
+
+<div id="faq-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header"><span>How to use Orbit</span><span onclick="document.getElementById('faq-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div>
+        <div class="modal-body">
+            <div class="faq-step">
+                <div class="faq-num">1</div>
+                <div class="faq-text">
+                    <strong>Build Your Team</strong>
+                    Use the sidebar to add <b>Cities</b> first (Required). Once a city is added, you can add <b>Teammates</b> to that location (Optional). Adding names helps you visualize who is where.
+                </div>
+            </div>
+            <div class="faq-divider"></div>
+            <div class="faq-step">
+                <div class="faq-num">2</div>
+                <div class="faq-text">
+                    <strong>Set Your Target</strong>
+                    Use the white bar at the bottom to control the schedule:
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 5px;">
+                        <li><b>Date:</b> Select a future date to check availability.</li>
+                        <li><b>Zone:</b> Choose the primary timezone you are viewing the grid from.</li>
+                        <li><b>Duration:</b> Select how long the meeting will be (30m, 1h, 1.5h).</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="faq-divider"></div>
+            <div class="faq-step">
+                <div class="faq-num">3</div>
+                <div class="faq-text">
+                    <strong>Filter & Focus</strong>
+                    Use the top filter bar (above the grid) to toggle specific timezones on or off. This lets you optimize the schedule for only the necessary regions.
+                </div>
+            </div>
+            <div class="faq-divider"></div>
+            <div class="faq-step">
+                <div class="faq-num">4</div>
+                <div class="faq-text">
+                    <strong>Customize Availability</strong>
+                    The grid shows overlap. Default work hours are <b>9am - 5pm</b>, with Lunch from <b>12pm - 1:30pm</b>. 
+                    <br>You can stretch availability by clicking the icons next to a timezone name:
+                    <div style="margin-top: 8px; display: grid; gap: 5px;">
+                        <div><span class="icon-inline">🌅</span> <strong>Early Bird:</strong> Adds 7am - 9am availability.</div>
+                        <div><span class="icon-inline">🦉</span> <strong>Night Owl:</strong> Adds 5pm - 10:30pm availability.</div>
+                        <div><span class="icon-inline">🌍</span> <strong>Global Flex:</strong> Makes that zone available 12 hours.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="faq-divider"></div>
+            <div class="faq-step">
+                <div class="faq-num">5</div>
+                <div class="faq-text">
+                    <strong>Pick & Share</strong>
+                    Click any <span style="color:#047857; font-weight:700;">Green Slot</span> in the grid or a recommendation tile to lock that time. 
+                    <br>Click <b>Share</b> to copy a link that includes your current team, date, and selected filters. Send this to teammates to review options.
+                </div>
+            </div>
+            <div class="faq-divider"></div>
+            <div class="faq-step">
+                <div class="faq-num">6</div>
+                <div class="faq-text">
+                    <strong>Save Your Setup</strong>
+                    To save your cities and teammates for next time, please <a href="auth.html" style="color:var(--accent-primary); text-decoration:underline;">Log In</a>. Guest mode data is temporary.
+                </div>
+            </div>
+            <div class="faq-divider"></div>
+            <div class="faq-step" style="opacity: 0.8;">
+                <div class="faq-num">💡</div>
+                <div class="faq-text">
+                    <strong>Pro Tip:</strong> Toggle between <b>Team View</b> (Grid) and <b>World Map</b> (Visual) using the button at the top right of the chart area.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="app-shell">
     <aside id="sidebar">
         <div class="sidebar-header">
             <div class="header-top">
-                <span class="text-4xl font-black tracking-tighter kindness-purple">orbit</span>
-                <span id="logout-btn" onclick="logout()" style="cursor:pointer; font-size:0.75rem; color:var(--text-muted); font-weight:600;">Logout</span>
+                <div style="display:flex; align-items:center;">
+                    <span class="text-4xl font-black tracking-tighter kindness-purple" onclick="window.location.reload()">orbit</span>
+                    <span class="beta-tag">BETA</span>
+                </div>
             </div>
-            <div id="guest-note">Log in to save</div>
+            <div class="header-actions">
+                <div class="btn-how-to" onclick="document.getElementById('faq-modal').style.display='flex'">
+                    <span>💡 How to use</span>
+                </div>
+                <span id="logout-btn" onclick="logout()">Logout</span>
+            </div>
+            <div id="guest-note">Log in to save <a href="auth.html">Login</a></div>
         </div>
         <div class="mgmt-section"><input type="text" id="cityInput" class="mgmt-input" placeholder="City name..."><button id="addCityBtn" class="btn-main btn-login" onclick="lookupCity()">ADD OFFICE</button></div>
         <div class="mgmt-section"><input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name..."><select id="newLoc" class="mgmt-input" style="appearance:none;"></select><button class="btn-main btn-signup" onclick="addMember()">ADD TEAMMATE</button></div>
@@ -459,9 +582,7 @@
             team = data.team || []; 
             if(data.pref) { data.pref.forEach(([k, v]) => tzPreferences[k] = new Set(v)); } 
             
-            // Set the Shared Date here
             document.getElementById('schedDate').value = data.d; 
-            
             document.getElementById('durVal').value = data.dur; 
             populateLocDropdown(); 
             populateTzDropdown(); 
@@ -469,7 +590,6 @@
             buildMatchChart(); 
             if(data.ref) document.getElementById('inputTz').value = data.ref; 
         } catch(e) { 
-            // Fallback if share data is corrupt
             document.getElementById('schedDate').valueAsDate = new Date();
             enableGuestMode(); 
         } 
@@ -592,5 +712,3 @@
 </script>
 </body>
 </html>
-
-```
