@@ -25,7 +25,6 @@
         .brand-section h1 { color: white; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900; margin: 0; letter-spacing: -3px; line-height: 1; }
         .brand-tagline { font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.2; color: rgba(255,255,255,0.95); margin-top: 15px; font-weight: 400; }
         .highlight-kindness { color: var(--slack-green); font-weight: 700; }
-        .highlight-action { font-weight: 700; color: var(--slack-green); border-bottom: none; }
 
         .auth-card { flex: 0.85; background: white; padding: clamp(20px, 5vw, 40px); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); text-align: center; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; }
         .auth-input { width: 100%; padding: 16px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 1rem; outline: none; }
@@ -52,18 +51,20 @@
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 10px; }
         
         #main-view-container { flex-grow: 1; display: flex; flex-direction: column; background: #fff; position: relative; width: 100%; height: 100%; overflow: hidden; }
-        #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
+        
+        #map-area { flex-grow: 1; position: relative; overflow: hidden; background: #000; display: none; }
         #map-bg { width: 100%; height: 100%; background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); background-size: 100% 100%; filter: saturate(0.5) brightness(1.1); }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        #rec-view { display: none; flex-grow: 1; background: white; flex-direction: column; height: 100%; overflow: hidden; padding: 0; }
+        #rec-view { display: flex; flex-grow: 1; background: white; flex-direction: column; height: 100%; overflow: hidden; padding: 0; }
+        
         .fixed-header-group { padding: 20px 30px 0 30px; background: white; flex-shrink: 0; border-bottom: 1px solid #eee; z-index: 20; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
         .scrollable-body { flex-grow: 1; overflow-y: auto; padding: 20px 30px 40px 30px; }
         .chart-centered-content { max-width: 1400px; margin: 0 auto; }
-        .chart-controls { display: flex; align-items: center; gap: 20px; }
-        .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; }
+        .chart-controls { display: flex; align-items: center; gap: 10px; } 
+        .chart-legend { display: flex; gap: 15px; font-size: 0.7rem; font-weight: 700; margin-right: 15px; }
         .legend-item { display: flex; align-items: center; gap: 5px; }
         .legend-box { width: 12px; height: 12px; border-radius: 2px; }
         
@@ -128,9 +129,17 @@
         .city-sub { font-size: 0.8rem; color: #666; margin-left: 28px; }
         .close-modal { cursor: pointer; font-size: 1.2rem; opacity: 0.7; }
         .close-modal:hover { opacity: 1; }
+        
+        #share-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--slack-navy); color: white; padding: 10px 20px; border-radius: 30px; font-weight: 700; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 5000; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+        #share-toast.show { opacity: 1; top: 40px; }
+        
+        .map-floating-btn { position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: white; color: var(--slack-purple); border: 2px solid var(--slack-purple); border-radius: 8px; font-weight: 800; cursor: pointer; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }
+        .map-floating-btn:hover { background: var(--slack-purple); color: white; transform: scale(1.05); }
     </style>
 </head>
 <body>
+
+<div id="share-toast"><span>🔗 Link Copied to Clipboard!</span></div>
 
 <div id="auth-overlay">
     <div class="bg-mesh"></div>
@@ -179,20 +188,27 @@
     </aside>
 
     <main id="main-view-container">
-        <div id="map-area"><div id="map-bg"></div><svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none"><g id="day-night-layer"></g><g id="grid-lines-layer"></g><g id="grid-label-layer"></g><g id="marker-layer"></g></svg></div>
+        <div id="map-area">
+            <div id="map-bg"></div>
+            <svg id="svg-map" viewBox="0 0 800 400" preserveAspectRatio="none"><g id="day-night-layer"></g><g id="grid-lines-layer"></g><g id="grid-label-layer"></g><g id="marker-layer"></g></svg>
+            <button class="map-floating-btn" onclick="toggleView('rec')">📊 VIEW GRID</button>
+        </div>
         
         <div id="rec-view">
             <div class="fixed-header-group">
                 <div class="chart-centered-content">
                     <div class="chart-header-row">
-                        <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Day Match Chart</h2><span style="font-size:0.75rem; color:#666;">Timezone Grid</span></div>
+                        <div><h2 style="color:var(--slack-purple); margin:0; font-weight:900;">Team Overlap</h2><span style="font-size:0.75rem; color:#666;">Timezone Grid</span></div>
                         <div class="chart-controls">
                             <div class="chart-legend">
                                 <div class="legend-item"><div class="legend-box" style="background:var(--slack-green)"></div> Match</div>
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-lunch)"></div> Ask</div>
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-snooze)"></div> Sleep</div>
                             </div>
-                            <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">← BACK TO MAP</button>
+                            <button onclick="shareDashboard()" style="padding:10px 15px; background:white; color:var(--slack-blue); border:1px solid var(--slack-border); border-radius:4px; cursor:pointer; font-weight:700; display:flex; align-items:center; gap:5px;">
+                                🔗 Share
+                            </button>
+                            <button onclick="toggleView('map')" style="padding:10px 20px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:800;">🌏 VIEW MAP</button>
                         </div>
                     </div>
                     <div id="tz-filter-bar" class="filter-bar"></div>
@@ -217,21 +233,24 @@
         </div>
 
         <footer id="scheduler">
-            <input type="date" id="schedDate" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();">
-            <select id="inputTz" style="padding:8px; max-width:120px;"></select>
-            <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23">
-            <select id="minVal" style="padding:8px"><option value="00">00</option><option value="30">30</option></select>
+            <input type="date" id="schedDate" style="padding:8px" onchange="setFitMode(true)">
+            
+            <select id="inputTz" style="padding:8px; max-width:120px;" onchange="buildMatchChart()"></select>
+            
+            <input type="number" id="hourVal" style="width:45px; padding:8px" placeholder="HH" min="0" max="23" onchange="setFitMode(true)">
+            <select id="minVal" style="padding:8px" onchange="setFitMode(true)"><option value="00">00</option><option value="30">30</option></select>
+            
             <span style="font-size:0.8rem; margin-left:10px">Duration:</span>
-            <select id="durVal" style="padding:8px" onchange="if(isMatchViewActive) buildMatchChart();"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
-            <button onclick="setFitMode(true)" style="padding:10px; background:var(--slack-purple); color:white; border:none; border-radius:4px; cursor:pointer;">SIMULATE</button>
-            <button onclick="buildMatchChart()" style="padding:10px; background:var(--slack-green); color:white; border:none; border-radius:4px; cursor:pointer;">BEST MATCH</button>
-            <button onclick="resetToLive()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">LIVE</button>
+            <select id="durVal" style="padding:8px" onchange="buildMatchChart()"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select>
+            
+            <button onclick="resetToLive()" style="padding:10px 15px; border:1px solid #ccc; background:#f8f8f8; color:#444; border-radius:4px; cursor:pointer; font-weight:700;" title="Reset to Current Time">
+                ↺ Now
+            </button>
         </footer>
     </main>
 </div>
 
 <script>
-    // AUTO-FALLBACK CONFIG FOR TESTING
     if (typeof CONFIG === 'undefined') {
         window.CONFIG = {
             SUPABASE_URL: 'https://xcdnyheqtagizlcyzuzb.supabase.co',
@@ -243,8 +262,22 @@
 
     const _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
+    const DEFAULT_LOCATIONS = [
+        { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST' },
+        { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.00, utc_offset: -5, tz: 'EST' },
+        { name: 'Chicago', code: 'CHI', lat: 41.87, lon: -87.62, utc_offset: -6, tz: 'CST' },
+        { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.41, utc_offset: -8, tz: 'PST' }
+    ];
+    const DEFAULT_TEAM = [
+        { id: 'g1', name: 'Ravi', location_name: 'Bengaluru' },
+        { id: 'g2', name: 'Sarah', location_name: 'New York' },
+        { id: 'g3', name: 'Mike', location_name: 'Chicago' },
+        { id: 'g4', name: 'Chen', location_name: 'San Francisco' }
+    ];
+
     let locationData = {}; let team = [];
-    let isFitMode = false; let isMatchViewActive = false;
+    let isFitMode = false; 
+    let isMatchViewActive = true; 
     let workDateUTC_MS = Date.now();
     let chartExclusions = new Set();
     let tzPreferences = {}; 
@@ -259,6 +292,12 @@
     }
     
     async function checkSession() {
+        const params = new URLSearchParams(window.location.search);
+        if(params.has('share')) {
+            loadSharedState(params.get('share'));
+            return;
+        }
+
         const { data: { session } } = await _supabase.auth.getSession();
         if (session) { 
             isGuestMode = false;
@@ -284,12 +323,60 @@
         }
     }
 
+    function shareDashboard() {
+        const payload = {
+            d: document.getElementById('schedDate').value,
+            dur: document.getElementById('durVal').value,
+            ref: document.getElementById('inputTz').value,
+            locs: locationData,
+            team: team, 
+            pref: Array.from(Object.entries(tzPreferences)).map(([k, v]) => [k, Array.from(v)])
+        };
+        const encoded = encodeURIComponent(JSON.stringify(payload));
+        const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`;
+        
+        navigator.clipboard.writeText(url).then(() => {
+            const t = document.getElementById('share-toast');
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        });
+    }
+
+    function loadSharedState(encodedStr) {
+        try {
+            const data = JSON.parse(decodeURIComponent(encodedStr));
+            isGuestMode = true; 
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('logout-btn').innerText = "🔗 Shared View";
+            
+            locationData = data.locs || {};
+            team = data.team || [];
+            if(data.pref) {
+                data.pref.forEach(([k, v]) => tzPreferences[k] = new Set(v));
+            }
+            
+            document.getElementById('schedDate').value = data.d;
+            document.getElementById('durVal').value = data.dur;
+            
+            populateLocDropdown(); 
+            populateTzDropdown(); 
+            
+            if(data.ref) document.getElementById('inputTz').value = data.ref;
+
+            render();
+            buildMatchChart(); 
+        } catch(e) {
+            console.error("Share parse error", e);
+            alert("Invalid Share Link");
+            enableGuestMode();
+        }
+    }
+
     function saveToLocal() {
         if(!isGuestMode) return;
         const data = {
             locations: Object.values(locationData).map(l => ({ name: l.name || Object.keys(locationData).find(k => locationData[k] === l), ...l })),
-            team: team,
-            prefs: Array.from(Object.entries(tzPreferences)).map(([k, v]) => [k, Array.from(v)])
+            team: team
         };
         localStorage.setItem('orbit_guest_data', JSON.stringify(data));
     }
@@ -302,65 +389,61 @@
                 const local = localStorage.getItem('orbit_guest_data');
                 if(local) {
                     const parsed = JSON.parse(local);
-                    locs = parsed.locations;
-                    members = parsed.team;
-                    if(parsed.prefs) {
-                        parsed.prefs.forEach(([k, v]) => tzPreferences[k] = new Set(v));
+                    if(parsed.locations && parsed.locations.length > 0) {
+                        locs = parsed.locations;
+                        members = parsed.team;
+                    } else {
+                        locs = DEFAULT_LOCATIONS;
+                        members = DEFAULT_TEAM;
                     }
                 } else {
-                    locs = [
-                        { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST' },
-                        { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.00, utc_offset: -5, tz: 'EST' },
-                        { name: 'Chicago', code: 'CHI', lat: 41.87, lon: -87.62, utc_offset: -6, tz: 'CST' },
-                        { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.41, utc_offset: -8, tz: 'PST' }
-                    ];
-                    members = [
-                        { id: 'g1', name: 'Ravi', location_name: 'Bengaluru' },
-                        { id: 'g2', name: 'Sarah', location_name: 'New York' },
-                        { id: 'g3', name: 'Mike', location_name: 'Chicago' },
-                        { id: 'g4', name: 'Chen', location_name: 'San Francisco' }
-                    ];
-                    locationData = {};
-                    locs.forEach(l => {
-                        const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
-                        locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: l.lon, lat: l.lat, name: l.name };
-                    });
-                    team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
-                    saveToLocal();
+                    locs = DEFAULT_LOCATIONS;
+                    members = DEFAULT_TEAM;
                 }
+                
+                locationData = {};
+                locs.forEach(l => {
+                    const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                    locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: l.lon, lat: l.lat, name: l.name };
+                    const key = `${l.tz}_${valOffset}`;
+                    tzPreferences[key] = new Set(); 
+                });
+                team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
+
             } else {
                 const { data: { user } } = await _supabase.auth.getUser();
                 if (!user) return;
                 const { data: dbLocs } = await _supabase.from('locations').select('*');
                 locs = dbLocs || [];
                 if (locs.length === 0) {
-                    const defaults = [
-                        { name: 'Bengaluru', code: 'BLR', lat: 12.97, lon: 77.59, utc_offset: 5.5, tz: 'IST', user_id: user.id },
-                        { name: 'New York', code: 'NYC', lat: 40.71, lon: -74.0, utc_offset: -5, tz: 'EST', user_id: user.id },
-                        { name: 'San Francisco', code: 'SFO', lat: 37.77, lon: -122.4, utc_offset: -8, tz: 'PST', user_id: user.id }
-                    ];
+                    const defaults = DEFAULT_LOCATIONS.map(d => ({...d, user_id: user.id}));
                     await _supabase.from('locations').insert(defaults);
                     const { data: nl } = await _supabase.from('locations').select('*');
                     locs = nl;
                 }
                 const { data: dbMems } = await _supabase.from('teammates').select('*');
                 members = dbMems || [];
+                
+                locationData = {};
+                locs.forEach(l => { 
+                    const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
+                    locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
+                    const key = `${l.tz}_${valOffset}`;
+                    tzPreferences[key] = new Set();
+                });
+                team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
             }
 
-            locationData = {};
-            locs.forEach(l => { 
-                const valOffset = (l.utc_offset !== undefined) ? l.utc_offset : l.offset;
-                locationData[l.name] = { code: l.code, offset: valOffset, tz: l.tz, lon: parseFloat(l.lon), lat: parseFloat(l.lat), name: l.name }; 
-                const key = `${l.tz}_${valOffset}`;
-                if(!tzPreferences[key]) tzPreferences[key] = new Set();
-            });
-            team = members.map(m => ({ id: m.id, name: m.name, loc: m.location_name }));
-            populateLocDropdown(); populateTzDropdown(); render();
+            populateLocDropdown(); 
+            populateTzDropdown(); 
+            render();
+            buildMatchChart(); 
         } catch(e) { console.error(e); }
     }
 
     function populateTzDropdown() {
         const sel = document.getElementById('inputTz');
+        const currentVal = sel.value;
         sel.innerHTML = `<option value="local">My Time</option>`;
         const uniqueTzs = {};
         Object.values(locationData).forEach(l => {
@@ -372,6 +455,7 @@
             opt.value = u.offset; opt.textContent = `${u.label} (${u.offset >= 0 ? '+' : ''}${u.offset})`;
             sel.appendChild(opt);
         });
+        if(currentVal && Array.from(sel.options).some(o => o.value === currentVal)) sel.value = currentVal;
     }
 
     async function lookupCity() {
@@ -401,6 +485,7 @@
                     if(!tzPreferences[key]) tzPreferences[key] = new Set();
                     saveToLocal();
                     populateLocDropdown(); populateTzDropdown(); render();
+                    if(isMatchViewActive) buildMatchChart();
                 } else {
                     const { data: { user } } = await _supabase.auth.getUser();
                     await _supabase.from('locations').upsert({ ...newLoc, user_id: user.id });
@@ -419,6 +504,7 @@
             team.push({ id: 'g' + Date.now(), name: n, loc: l });
             saveToLocal();
             render();
+            if(isMatchViewActive) buildMatchChart();
         } else {
             const { data: { user } } = await _supabase.auth.getUser();
             await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]);
@@ -434,6 +520,7 @@
                 team = team.filter(m => m.loc !== n);
                 saveToLocal();
                 populateLocDropdown(); populateTzDropdown(); render();
+                if(isMatchViewActive) buildMatchChart();
             } else {
                 await _supabase.from('locations').delete().eq('name', n); 
                 loadData(); 
@@ -446,6 +533,7 @@
             team = team.filter(m => m.id !== id);
             saveToLocal();
             render();
+            if(isMatchViewActive) buildMatchChart();
         } else {
             await _supabase.from('teammates').delete().eq('id', id); 
             loadData(); 
@@ -485,6 +573,8 @@
         isMatchViewActive = (v === 'rec');
         document.getElementById('map-area').style.display = v === 'map' ? 'block' : 'none';
         document.getElementById('rec-view').style.display = v === 'rec' ? 'flex' : 'none';
+        if(v === 'rec') buildMatchChart();
+        else drawMap(isFitMode ? workDateUTC_MS : Date.now());
     }
 
     function evaluateMatch(startUTC, anchorOffset, durationMinutes, anchorLabel) {
@@ -559,7 +649,7 @@
     function renderTile(s, container, isSingle) {
         const card = document.createElement('div');
         card.className = isSingle ? 'rec-card selected-card-style' : 'rec-card';
-        card.onclick = () => syncAndRender(s.utc); 
+        if (!isSingle) card.onclick = () => syncAndRender(s.utc); 
         
         const refVal = document.getElementById('inputTz').value;
         const durVal = document.getElementById('durVal').value;
@@ -586,11 +676,26 @@
 
         const timeRange = `${formatTime(startD)} – ${formatTime(endD)}`;
 
+        // --- NEW: Google Calendar Link Logic ---
+        let actionBtnHtml = "";
+        if (isSingle) {
+            const fmtGoogle = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+            const gStart = fmtGoogle(new Date(s.utc));
+            const gEnd = fmtGoogle(new Date(s.utc + (durMin * 60000)));
+            const gTitle = encodeURIComponent("Orbit Team Sync");
+            const gDetails = encodeURIComponent("Scheduled via Orbit.");
+            const gUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${gTitle}&dates=${gStart}/${gEnd}&details=${gDetails}`;
+            
+            actionBtnHtml = `<a href="${gUrl}" target="_blank" style="display:block; margin-top:15px; text-align:center; padding:12px; background:var(--slack-blue); color:white; text-decoration:none; border-radius:6px; font-weight:700; font-size:0.9rem; transition:0.2s;">📅 Schedule Google Meet</a>`;
+        }
+        // ----------------------------------------
+
         card.innerHTML = `<span class="rec-tag ${s.isGreen?'tag-green':'tag-yellow'}">${s.isGreen?'MATCH':'ASK'}</span>
             <div class="rec-time-main"><span>${s.isGreen?'🟢':'🟡'}</span> ${timeRange}</div>
             <div class="rec-reason">${s.reason}</div>
             <div class="rec-date-sub">${formatDate(startD)}</div>
-            <div class="rec-list"></div>`;
+            <div class="rec-list"></div>
+            ${actionBtnHtml}`;
         
         const list = card.querySelector('.rec-list');
         const groups = {};
@@ -611,7 +716,8 @@
     let allProcessedSlots = [];
 
     function buildMatchChart() {
-        toggleView('rec');
+        if (!isMatchViewActive) return;
+
         if (manualSelectionSlot === null) {} else { manualSelectionSlot = null; }
 
         const dS = document.getElementById('schedDate').value;
@@ -644,7 +750,7 @@
 
         const tzSelect = document.getElementById('inputTz');
         const refVal = tzSelect.value;
-        const anchorLabel = tzSelect.options[tzSelect.selectedIndex].text.split('(')[0].trim();
+        const anchorLabel = tzSelect.options[tzSelect.selectedIndex] ? tzSelect.options[tzSelect.selectedIndex].text.split('(')[0].trim() : "My Time";
 
         let startUTC_MS;
         let anchorOffset = 0; 
@@ -704,7 +810,6 @@
                 } else {
                     if(!(h>=22.5 || h<7)) {
                         if(prefs.has('early') && h>=7 && h<9) isGreen = true;
-                        // STD GAP FOR LUNCH 12-1.5
                         if((h>=9 && h<12)||(h>=13.5 && h<17)) isGreen = true;
                         if(prefs.has('night') && h>=17 && h<22.5) isGreen = true;
                     }
@@ -843,7 +948,6 @@
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             dot.setAttribute("cx", px); dot.setAttribute("cy", py); dot.setAttribute("r", 4); dot.setAttribute("fill", "white"); dot.setAttribute("stroke", "black"); markers.appendChild(dot);
             
-            // Re-added City Code Label
             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
             txt.setAttribute("x", px + 6); txt.setAttribute("y", py + 3);
             txt.setAttribute("class", "pin-lbl");
@@ -857,14 +961,26 @@
         const dS = document.getElementById('schedDate').value;
         const refVal = document.getElementById('inputTz').value;
         let t = (refVal === 'local') ? new Date(dS + "T" + h.toString().padStart(2,'0') + ":00").getTime() : (new Date(dS + "T" + h.toString().padStart(2,'0') + ":00Z").getTime() - parseFloat(refVal)*3600000);
-        workDateUTC_MS = t; isFitMode = v; buildMatchChart();
+        workDateUTC_MS = t; 
+        isFitMode = v; 
+        
+        if(isMatchViewActive) buildMatchChart();
+        else render();
     }
     
-    function resetToLive() { isFitMode = false; toggleView('map'); render(); }
+    function resetToLive() { 
+        document.getElementById('schedDate').valueAsDate = new Date();
+        document.getElementById('hourVal').value = "";
+        document.getElementById('minVal').value = "00";
+        workDateUTC_MS = Date.now();
+        isFitMode = false; 
+        
+        if(isMatchViewActive) buildMatchChart();
+        else render();
+    }
+
     checkSession();
     document.getElementById('schedDate').valueAsDate = new Date();
 </script>
 </body>
 </html>
-
-```
