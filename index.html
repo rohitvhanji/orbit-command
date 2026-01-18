@@ -61,6 +61,21 @@
             background: none;
             display: inline-block;
         }
+        
+        .beta-tag {
+            font-size: 0.7rem; 
+            font-weight: 800; 
+            color: #B45309; 
+            background: #FEF3C7; 
+            padding: 4px 8px; 
+            border-radius: 8px; 
+            vertical-align: middle; 
+            margin-left: 15px; 
+            letter-spacing: 0.5px;
+            border: 1px solid #FDE68A;
+            transform: translateY(-8px); /* Visual alignment with large logo */
+            display: inline-block;
+        }
 
         /* --- UI COMPONENTS (Light Mode Glass) --- */
         .glass-card-dark {
@@ -117,6 +132,7 @@
     <nav class="absolute top-0 left-0 right-0 p-10 z-50 flex items-center justify-between">
         <div class="flex items-center">
             <span class="text-6xl font-black tracking-tighter kindness-purple">orbit</span>
+            <span class="beta-tag">BETA</span>
         </div>
 
         <div class="flex items-center gap-8">
@@ -234,8 +250,9 @@
         </div>
     </main>
 
-    <footer class="absolute bottom-10 left-12 z-20">
-        <div class="text-[10px] font-medium opacity-20 italic text-slate-400">Respect the rest. Sync the team. 🌍</div>
+    <footer class="absolute bottom-6 w-full z-20 flex flex-col gap-1 items-center justify-center">
+        <div class="text-[10px] font-medium opacity-40 italic text-slate-400">Respect the rest. Sync the team. 🌍</div>
+        <div class="text-[10px] font-bold opacity-30 text-slate-900 uppercase tracking-widest">© 2025 Orbit. All rights reserved.</div>
     </footer>
 
     <script>
