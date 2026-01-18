@@ -15,7 +15,7 @@
             --bg-surface: #FFFFFF;    
             --border-subtle: #E2E8F0; 
             
-            --text-main: #0F172A;      
+            --text-main: #0F172A;       
             --text-muted: #64748B;    
             
             --accent-primary: #6366F1; /* Indigo */
@@ -140,9 +140,8 @@
 
         .chart-controls { display: flex; align-items: center; gap: 10px; }
         
-        /* 3. FIXED: Legend Alignment & Spacing */
         .chart-legend { 
-            display: flex; gap: 15px; align-items: center; /* Perfect vertical alignment */
+            display: flex; gap: 15px; align-items: center; 
             font-size: 0.7rem; font-weight: 600; 
             background: white; padding: 6px 12px; border-radius: 20px; 
             border: 1px solid var(--border-subtle); color: var(--text-muted); 
@@ -151,7 +150,6 @@
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-box { width: 8px; height: 8px; border-radius: 2px; }
 
-        /* 2. FIXED: Unified Button Theme */
         .btn-action {
             padding: 8px 16px; 
             border-radius: 8px; 
@@ -304,7 +302,6 @@
 
         .map-floating-btn { 
             position: absolute; top: 20px; right: 20px;
-            /* Merged btn-action style here manually for absolute positioning context */
             padding: 10px 20px; 
             border-radius: 10px; 
             font-size: 0.8rem; 
@@ -336,7 +333,6 @@
         
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; stroke: #020617; stroke-width: 3px; paint-order: stroke; }
         
-        /* 1. FIXED: Grid Line Visibility on Map */
         .grid-line { stroke: rgba(255,255,255,0.6); stroke-width: 2px; stroke-dasharray: 4; }
     </style>
 </head>
@@ -424,7 +420,7 @@
         if (session) { 
             isGuestMode = false; 
             document.getElementById('logout-btn').innerText = "Logout"; 
-            document.getElementById('guest-note').style.display = 'none'; // Hide note
+            document.getElementById('guest-note').style.display = 'none'; 
             loadData(); 
         } else {
             enableGuestMode(); 
@@ -434,7 +430,7 @@
     function enableGuestMode() { 
         isGuestMode = true; 
         document.getElementById('logout-btn').innerText = "☁️ Guest"; 
-        document.getElementById('guest-note').style.display = 'block'; // Show note
+        document.getElementById('guest-note').style.display = 'block'; 
         loadData(); 
     }
     
@@ -444,7 +440,27 @@
     }
 
     function shareDashboard() { const payload = { d: document.getElementById('schedDate').value, dur: document.getElementById('durVal').value, ref: document.getElementById('inputTz').value, locs: locationData, team: team, pref: Array.from(Object.entries(tzPreferences)).map(([k, v]) => [k, Array.from(v)]) }; const url = `${window.location.origin}${window.location.pathname}?share=${encodeURIComponent(JSON.stringify(payload))}`; navigator.clipboard.writeText(url).then(() => { const t = document.getElementById('share-toast'); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }); }
-    function loadSharedState(encodedStr) { try { const data = JSON.parse(decodeURIComponent(encodedStr)); isGuestMode = true; locationData = data.locs || {}; team = data.team || []; if(data.pref) { data.pref.forEach(([k, v]) => tzPreferences[k] = new Set(v)); } document.getElementById('schedDate').value = data.d; document.getElementById('durVal').value = data.dur; populateLocDropdown(); populateTzDropdown(); render(); buildMatchChart(); if(data.ref) document.getElementById('inputTz').value = data.ref; } catch(e) { enableGuestMode(); } }
+    
+    function loadSharedState(encodedStr) { 
+        try { 
+            const data = JSON.parse(decodeURIComponent(encodedStr)); 
+            isGuestMode = true; 
+            document.getElementById('logout-btn').innerText = "☁️ Guest"; 
+            document.getElementById('guest-note').style.display = 'block'; 
+            locationData = data.locs || {}; 
+            team = data.team || []; 
+            if(data.pref) { data.pref.forEach(([k, v]) => tzPreferences[k] = new Set(v)); } 
+            document.getElementById('schedDate').value = data.d; 
+            document.getElementById('durVal').value = data.dur; 
+            populateLocDropdown(); 
+            populateTzDropdown(); 
+            render(); 
+            buildMatchChart(); 
+            if(data.ref) document.getElementById('inputTz').value = data.ref; 
+        } catch(e) { 
+            enableGuestMode(); 
+        } 
+    }
 
     async function loadData() {
         try {
@@ -506,12 +522,18 @@
     }
 
     function renderTile(s, c, iS) {
-        const card = document.createElement('div'); card.className = iS ? 'rec-card selected-card-style' : 'rec-card'; if (!iS) card.onclick = () => syncAndRender(s.utc); 
+        const card = document.createElement('div'); 
+        card.className = iS ? 'rec-card selected-card-style' : 'rec-card'; 
+        if (!iS) card.onclick = () => syncAndRender(s.utc); 
         const rV = document.getElementById('inputTz').value, dM = parseInt(document.getElementById('durVal').value); let sD, eD; if(rV === 'local') { sD = new Date(s.utc); eD = new Date(s.utc + (dM * 60000)); } else { const o = parseFloat(rV) * 3600000; sD = new Date(s.utc + o); eD = new Date(s.utc + o + (dM * 60000)); }
         const fT = (d) => rV === 'local' ? `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}` : `${d.getUTCHours()}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
         const fD = (d) => rV === 'local' ? d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}) : d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
+        
+        // Added Close Button
+        let closeBtn = iS ? `<div style="position:absolute; top:12px; right:12px; cursor:pointer; font-size:1.1rem; color:var(--text-muted); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#F1F5F9;" onclick="event.stopPropagation(); resetToLive()">✕</div>` : `<span class="rec-tag ${s.isGreen?'tag-green':'tag-yellow'}">${s.isGreen?'MATCH':'ASK'}</span>`;
+
         let aB = iS ? `<a href="https://www.google.com/calendar/render?action=TEMPLATE&text=Orbit%20Team%20Sync&dates=${new Date(s.utc).toISOString().replace(/-|:|\.\d\d\d/g, "")}/${new Date(s.utc + (dM * 60000)).toISOString().replace(/-|:|\.\d\d\d/g, "")}" target="_blank" style="display:block; margin-top:15px; text-align:center; padding:12px; background:var(--slack-purple); color:white; text-decoration:none; border-radius:12px; font-weight:700; font-size:0.9rem;">📅 Schedule Meet</a>` : "";
-        card.innerHTML = `<span class="rec-tag ${s.isGreen?'tag-green':'tag-yellow'}">${s.isGreen?'MATCH':'ASK'}</span><div class="rec-time-main"><span>${s.isGreen?'🟢':'🟡'}</span> ${fT(sD)} – ${fT(eD)}</div><div class="rec-reason">${s.reason}</div><div class="rec-date-sub">${fD(sD)}</div><div class="rec-list"></div>${aB}`;
+        card.innerHTML = `${closeBtn}<div class="rec-time-main"><span>${s.isGreen?'🟢':'🟡'}</span> ${fT(sD)} – ${fT(eD)}</div><div class="rec-reason">${s.reason}</div><div class="rec-date-sub">${fD(sD)}</div><div class="rec-list"></div>${aB}`;
         const active = [...new Set(Object.values(locationData).map(l => `${l.tz}_${l.offset}`))].filter(k => !chartExclusions.has(k));
         active.forEach(key => { const loc = Object.values(locationData).find(l => `${l.tz}_${l.offset}` === key); const ltS = new Date(s.utc + (loc.offset * 3600000)), ltE = new Date(s.utc + (loc.offset * 3600000) + (dM * 60000)); card.querySelector('.rec-list').innerHTML += `<div class="rec-row"><span>${loc.tz}</span><span>${fT(ltS)} – ${fT(ltE)}</span></div>`; }); c.appendChild(card);
     }
@@ -538,7 +560,8 @@
         const g = document.getElementById('m-grid');
         for(let i=0; i<count; i++){ const slot = sUTC + (i * sMs), data = evaluateMatch(slot, parseFloat(rV==='local'?-1*(new Date().getTimezoneOffset()/60):rV), dM, "Team"); allProcessedSlots.push({ utc: slot, ...data }); const box = document.createElement('div'); box.className = 'chart-box'; if (isFitMode && workDateUTC_MS === slot) box.classList.add('highlight-slot'); box.style.background = data.color; box.onclick = () => syncAndRender(slot); g.appendChild(box); }
         const rc = document.getElementById('rec-results'); rc.innerHTML = ''; allProcessedSlots.filter(r => !r.isRed).sort((a,b) => b.totalScore - a.totalScore || a.utc - b.utc).slice(0, 3).forEach(s => renderTile(s, rc, false));
-        const sc = document.getElementById('selected-results'), sw = document.getElementById('selected-section'); sc.innerHTML = ''; if (isFitMode) { const s = allProcessedSlots.find(r => r.utc === workDateUTC_MS); if (s) { renderTile(s, sc, true); sw.style.display = 'block'; } } else sw.style.display = 'none';
+        const sc = document.getElementById('selected-results'), sw = document.getElementById('selected-section'); sc.innerHTML = ''; 
+        if (isFitMode) { const s = allProcessedSlots.find(r => r.utc === workDateUTC_MS); if (s) { renderTile(s, sc, true); sw.style.display = 'block'; } else { sw.style.display = 'none'; } } else { sw.style.display = 'none'; }
     }
 
     function syncAndRender(uM) { workDateUTC_MS = uM; isFitMode = true; const rV = document.getElementById('inputTz').value; let dD = (rV === 'local') ? new Date(uM) : new Date(uM + (parseFloat(rV) * 3600000)); document.getElementById('hourVal').value = dD.getUTCHours(); document.getElementById('minVal').value = dD.getUTCMinutes() >= 30 ? "30" : "00"; render(); buildMatchChart(); }
