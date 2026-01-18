@@ -1,3 +1,16 @@
+I have identified the bug.
+
+**The Issue:**
+At the very bottom of your script, there was a line: `document.getElementById('schedDate').valueAsDate = new Date();`.
+
+This line ran *after* the shared state was loaded. So, `loadSharedState` would correctly set the date to **2026-01-22**, but the script would immediately overwrite it with **Today's Date** (2025/2026). When you clicked a tile, the app tried to match a 2026 time slot against a 2025 grid, found no match, and showed nothing.
+
+**The Fix:**
+I have moved the date initialization inside `checkSession`. It now only sets "Today's Date" if you are **NOT** viewing a shared link.
+
+Here is the corrected full code for `app.html`.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -415,7 +428,15 @@
 
     async function checkSession() { 
         const params = new URLSearchParams(window.location.search); 
-        if(params.has('share')) { loadSharedState(params.get('share')); return; } 
+        // 1. Check for SHARE param
+        if(params.has('share')) { 
+            loadSharedState(params.get('share')); 
+            return; 
+        } 
+        
+        // 2. Only if NOT sharing, default date to today
+        document.getElementById('schedDate').valueAsDate = new Date();
+
         const { data: { session } } = await _supabase.auth.getSession(); 
         if (session) { 
             isGuestMode = false; 
@@ -450,7 +471,10 @@
             locationData = data.locs || {}; 
             team = data.team || []; 
             if(data.pref) { data.pref.forEach(([k, v]) => tzPreferences[k] = new Set(v)); } 
+            
+            // Set the Shared Date here
             document.getElementById('schedDate').value = data.d; 
+            
             document.getElementById('durVal').value = data.dur; 
             populateLocDropdown(); 
             populateTzDropdown(); 
@@ -458,6 +482,8 @@
             buildMatchChart(); 
             if(data.ref) document.getElementById('inputTz').value = data.ref; 
         } catch(e) { 
+            // Fallback if share data is corrupt
+            document.getElementById('schedDate').valueAsDate = new Date();
             enableGuestMode(); 
         } 
     }
@@ -529,7 +555,6 @@
         const fT = (d) => rV === 'local' ? `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}` : `${d.getUTCHours()}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
         const fD = (d) => rV === 'local' ? d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}) : d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
         
-        // Added Close Button
         let closeBtn = iS ? `<div style="position:absolute; top:12px; right:12px; cursor:pointer; font-size:1.1rem; color:var(--text-muted); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#F1F5F9;" onclick="event.stopPropagation(); resetToLive()">✕</div>` : `<span class="rec-tag ${s.isGreen?'tag-green':'tag-yellow'}">${s.isGreen?'MATCH':'ASK'}</span>`;
 
         let aB = iS ? `<a href="https://www.google.com/calendar/render?action=TEMPLATE&text=Orbit%20Team%20Sync&dates=${new Date(s.utc).toISOString().replace(/-|:|\.\d\d\d/g, "")}/${new Date(s.utc + (dM * 60000)).toISOString().replace(/-|:|\.\d\d\d/g, "")}" target="_blank" style="display:block; margin-top:15px; text-align:center; padding:12px; background:var(--slack-purple); color:white; text-decoration:none; border-radius:12px; font-weight:700; font-size:0.9rem;">📅 Schedule Meet</a>` : "";
@@ -574,7 +599,11 @@
     function setFitMode(v) { const h = parseInt(document.getElementById('hourVal').value) || 0, dS = document.getElementById('schedDate').value, rV = document.getElementById('inputTz').value; workDateUTC_MS = (rV === 'local') ? new Date(dS + "T" + h.toString().padStart(2,'0') + ":00").getTime() : (new Date(dS + "T" + h.toString().padStart(2,'0') + ":00Z").getTime() - parseFloat(rV)*3600000); isFitMode = v; if(isMatchViewActive) buildMatchChart(); else render(); }
     function resetToLive() { document.getElementById('schedDate').valueAsDate = new Date(); document.getElementById('hourVal').value = ""; document.getElementById('minVal').value = "00"; workDateUTC_MS = Date.now(); isFitMode = false; if(isMatchViewActive) buildMatchChart(); else render(); }
     function closeModal() { document.getElementById('city-modal').style.display = 'none'; }
-    checkSession(); document.getElementById('schedDate').valueAsDate = new Date();
+    
+    // STARTUP
+    checkSession(); 
 </script>
 </body>
 </html>
+
+```
