@@ -107,7 +107,6 @@
             font-size: 0.75rem; color: var(--text-muted); font-weight: 600; cursor: pointer; text-decoration: underline; margin-left: auto;
         }
 
-        /* UPDATED GUEST NOTE STYLING */
         #guest-note {
             font-size: 0.75rem; 
             color: var(--text-main); 
@@ -115,7 +114,7 @@
             margin-top: 10px; 
             text-align: center; 
             display: none;
-            background: #FEF3C7; /* Yellow background like Beta tag */
+            background: #FEF3C7; 
             padding: 6px 10px; 
             border-radius: 6px; 
             border: 1px solid #FDE68A;
@@ -235,8 +234,9 @@
         }
         .chart-centered-content { max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; height: 100%; }
 
+        /* --- MATHEMATICAL FIX FOR ZERO SPILLOVER --- */
         #chart-scroll-area {
-            max-height: 45vh; 
+            height: 225px; /* Exact height for 3 rows (75px * 3) */
             overflow-y: scroll; 
             overflow-x: hidden;
             padding-right: 5px;
@@ -245,8 +245,11 @@
         }
 
         .timezone-row-container { 
-            margin-bottom: 35px; 
+            height: 75px; /* Standardize height per row */
+            margin-bottom: 0px; /* Remove margin to prevent peeking */
+            padding-bottom: 10px; /* Internal spacing instead */
             scroll-snap-align: start;
+            overflow: hidden;
         }
 
         #chart-static-footer {
@@ -255,13 +258,7 @@
             border-top: 1px solid var(--border-subtle);
             background: var(--bg-body);
             flex-shrink: 0;
-            overflow-y: scroll; 
-            padding-right: 5px; 
         }
-
-        #chart-static-footer::-webkit-scrollbar { width: 4px; }
-        #chart-static-footer::-webkit-scrollbar-thumb { background: transparent; }
-        #chart-static-footer::-webkit-scrollbar-track { background: transparent; }
 
         .chart-label { 
             width: 150px; 
@@ -501,7 +498,7 @@
             <div class="faq-step" style="opacity: 0.8;">
                 <div class="faq-num">💡</div>
                 <div class="faq-text">
-                    <strong>Pro Tip:</strong> Toggle between <b>Team View</b> (Grid) and <b>World Map</b> (Visual) using the button at the top right of the chart area.
+                    <strong>Pro Tip:</strong> Toggle between <b>Team View</b> (Grid) and <b> Map View</b> (Visual) using the button at the top right of the chart area.
                 </div>
             </div>
         </div>
@@ -565,7 +562,7 @@
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-lunch)"></div> Ask</div>
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-weekend)"></div> Off Work</div>
                             </div>
-                            <button onclick="toggleView('map')" class="btn-action btn-action-primary">World Map</button>
+                            <button onclick="toggleView('map')" class="btn-action btn-action-primary">Map View</button>
                         </div>
                     </div>
                     <div id="tz-filter-bar" class="filter-bar"></div>
@@ -780,7 +777,6 @@
     function buildMatchChart() {
         if (!isMatchViewActive) return; const dS = document.getElementById('schedDate').value; if(!dS) return;
         
-        // FIXED: Separate scroll area from static footer
         const scrollBody = document.getElementById('chart-scroll-area'); 
         const footerBody = document.getElementById('chart-static-footer');
         scrollBody.innerHTML = '';
@@ -792,17 +788,16 @@
         const rV = document.getElementById('inputTz').value; let sUTC = (rV === 'local') ? new Date(dS + "T00:00:00").getTime() : new Date(dS + "T00:00:00Z").getTime() - (parseFloat(rV) * 3600000); allProcessedSlots = [];
         aGK.forEach(key => {
             if (chartExclusions.has(key)) return; const loc = groups[key], prefs = tzPreferences[key] || new Set();
+            
             let rowH = `<div class="timezone-row-container"><div class="local-time-row">`;
             for(let i=0; i<count; i++){ const slot = sUTC + (i * sMs), lD = new Date(slot + (loc.offset * 3600000)); let h = lD.getUTCHours(); let dP = (h === 0 && lD.getUTCMinutes() === 0) ? `<span style="color:var(--slack-purple); font-weight:900; font-size:0.6rem;">${lD.toLocaleDateString('en-US', { weekday: 'short', timeZone:'UTC' })}</span>` : h; rowH += `<div class="time-tick">${dP}</div>`; }
-            rowH += `</div><div class="chart-row"><div class="chart-label"><span>${loc.tz}</span><div class="pref-group"><div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')" data-tooltip="Early bird - 7 to 9">☀</div><div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')" data-tooltip="Night Owl - 5 to 22:30">🌙</div><div class="pref-pill ${prefs.has('global')?'global-active':''}" onclick="togglePreference('${key}', 'global')" data-tooltip="Global Flex - 12 hrs">🌍</div></div></div><div class="chart-grid">`;
+            rowH += `</div><div class="chart-row"><div class="chart-label"><span>${loc.tz}</span><div class="pref-group"><div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')" data-tooltip="Early bird - Starts 7">☀</div><div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')" data-tooltip="Night Owl - Till 22:30">🌙</div><div class="pref-pill ${prefs.has('global')?'global-active':''}" onclick="togglePreference('${key}', 'global')" data-tooltip="Global Flex - 12 hrs">🌍</div></div></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){ const slot = sUTC + (i * sMs), lD = new Date(slot + (loc.offset * 3600000)), h = lD.getUTCHours() + (lD.getUTCMinutes()/60), s = getStatus(slot + (loc.offset * 3600000), h); let isG = false; if (lD.getUTCDay() !== 0 && lD.getUTCDay() !== 6) { if(prefs.has('global')) { if(h>=6 && h<24) isG = true; } else { if(!(h>=22.5 || h<7)) { if((h>=9 && h<12)||(h>=13.5 && h<17)) isG = true; if(prefs.has('early') && h>=7 && h<9) isG = true; if(prefs.has('night') && h>=17 && h<22.5) isG = true; } } } 
             const bgColor = isG ? '#D1FAE5' : (s.isRed ? '#F1F5F9' : '#FEF3C7'); const textColor = isG ? '#047857' : (s.isRed ? '#94A3B8' : '#B45309'); rowH += `<div class="chart-box ${isFitMode && workDateUTC_MS === slot ? 'highlight-slot' : ''}" style="background:${bgColor}; color:${textColor};" data-tooltip="${isG ? 'Online' : 'Offline'}">${isG ? '💻' : s.emoji}</div>`; }
             rowH += `</div></div></div>`; 
-            // Append to SCROLL area
             scrollBody.innerHTML += rowH;
         });
         
-        // Append Status Row to STATIC footer
         let footerHTML = `<div class="chart-row match-row"><div class="chart-label">Status</div><div class="chart-grid" id="m-grid"></div></div>`;
         footerBody.innerHTML = footerHTML;
 
@@ -815,7 +810,6 @@
     function syncAndRender(uM) { workDateUTC_MS = uM; isFitMode = true; const rV = document.getElementById('inputTz').value; let dD = (rV === 'local') ? new Date(uM) : new Date(uM + (parseFloat(rV) * 3600000)); document.getElementById('hourVal').value = dD.getUTCHours(); document.getElementById('minVal').value = dD.getUTCMinutes() >= 30 ? "30" : "00"; render(); buildMatchChart(); }
     function render() {
         const rM = isFitMode ? workDateUTC_MS : Date.now(), c = document.getElementById('member-groups'); if (c) { c.innerHTML = ''; if (Object.keys(locationData).length === 0) { c.innerHTML = `<div style="padding:20px; text-align:center; opacity:0.6; color:#94A3B8;">Add a city above.</div>`; } else { const gs = {}; Object.keys(locationData).forEach(n => { const d = locationData[n], k = `${d.tz}_${d.offset}`; if(!gs[k]) gs[k] = { label: d.tz, offset: d.offset, cities: [] }; gs[k].cities.push(n); }); Object.keys(gs).sort((a,b) => gs[b].offset - gs[a].offset).forEach(k => { const g = gs[k], l = new Date(rM + (g.offset * 3600000)), ds = l.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }), ts = l.getUTCHours().toString().padStart(2,'0') + ":" + l.getUTCMinutes().toString().padStart(2,'0'); let tH = `<div class="timezone-group"><div class="tz-header"><span>${g.label} (${g.offset >= 0 ? '+' : ''}${g.offset})</span><span>${ds} ${ts}</span></div>`; g.cities.forEach(loc => { const ms = team.filter(m => m.loc === loc); tH += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')" data-tooltip="Remove Location">×</span></div>`; ms.forEach(m => { 
-            // FIXED: Calculate real hour for status
             const localTime = new Date(rM + (locationData[loc].offset * 3600000));
             const h = localTime.getUTCHours() + (localTime.getUTCMinutes()/60);
             const s = getStatus(rM + (locationData[loc].offset * 3600000), h); 
@@ -828,7 +822,6 @@
     function resetToLive() { document.getElementById('schedDate').valueAsDate = new Date(); document.getElementById('hourVal').value = ""; document.getElementById('minVal').value = "00"; workDateUTC_MS = Date.now(); isFitMode = false; if(isMatchViewActive) buildMatchChart(); else render(); }
     function closeModal() { document.getElementById('city-modal').style.display = 'none'; }
     
-    // RESTORED TOOLTIP LISTENER
     const tooltip = document.getElementById('global-tooltip');
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip]');
