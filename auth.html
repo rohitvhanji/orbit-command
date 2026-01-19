@@ -17,8 +17,6 @@
             height: 100vh; width: 100vw; overflow: hidden;
             display: flex; align-items: center; justify-content: center;
         }
-
-        /* Background */
         .bg-mesh { 
             position: absolute; inset: -50%; width: 200%; height: 200%; 
             background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); 
@@ -28,7 +26,6 @@
         }
         @keyframes drift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* Card */
         .login-card {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
@@ -38,25 +35,14 @@
             width: 100%; max-width: 450px; padding: 3rem;
             text-align: center;
         }
-
-        /* Inputs */
         .input-light {
             background: #F8FAFC; border: 1px solid #E2E8F0; color: #0F172A; transition: all 0.3s ease;
         }
         .input-light:focus {
             background: white; border-color: #8B5CF6; outline: none; box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
         }
-
-        /* Buttons */
         .btn-primary { background: #0F172A; color: white; transition: all 0.3s; }
         .btn-primary:hover { background: #1E293B; transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3); }
-        
-        .btn-secondary { background: white; color: #0F172A; border: 2px solid #E2E8F0; transition: all 0.3s; }
-        .btn-secondary:hover { border-color: #0F172A; transform: translateY(-2px); }
-
-        .btn-outline { background: transparent; color: #64748B; border: 1px dashed #CBD5E1; transition: all 0.3s; }
-        .btn-outline:hover { border-color: #7C3AED; color: #7C3AED; background: #F5F3FF; }
-
         .kindness-purple {
             background: linear-gradient(135deg, #7C3AED 0%, #A855F7 50%, #6366F1 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -68,143 +54,182 @@
     <div class="bg-mesh"></div>
 
     <div class="login-card">
-        <div class="mb-8">
+        <div class="mb-10">
             <span class="text-6xl font-black tracking-tighter kindness-purple drop-shadow-sm block mb-4">orbit</span>
-            <h1 class="text-2xl font-bold text-slate-900 mb-1">Welcome Back</h1>
+            <h1 id="header-title" class="text-2xl font-bold text-slate-900 mb-1">Welcome Back</h1>
             <p class="text-slate-500 text-sm font-medium">Sync your global team.</p>
         </div>
 
-        <div id="step-1" class="flex flex-col gap-3">
-            <input type="email" id="auth-email" class="input-light w-full p-4 rounded-2xl font-bold text-sm" placeholder="Email Address">
-            <input type="password" id="auth-pass" class="input-light w-full p-4 rounded-2xl font-bold text-sm" placeholder="Password">
+        <div id="view-login" class="flex flex-col gap-4">
+            <input type="email" id="email-login" class="input-light w-full p-4 rounded-2xl font-bold text-sm" placeholder="Email Address">
+            <input type="password" id="pass-login" class="input-light w-full p-4 rounded-2xl font-bold text-sm" placeholder="Password">
             
-            <button onclick="handleAuth('login')" class="btn-primary w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-xs mt-2">
+            <div class="flex justify-end -mt-2">
+                <button onclick="switchView('forgot')" class="text-xs font-bold text-slate-400 hover:text-indigo-600 transition">
+                    Forgot Password?
+                </button>
+            </div>
+
+            <button onclick="handleLogin()" class="btn-primary w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-xs mt-2">
                 Log In
             </button>
-            
-            <div class="relative flex py-2 items-center">
-                <div class="flex-grow border-t border-slate-200"></div>
-                <span class="flex-shrink mx-4 text-slate-300 text-xs font-bold uppercase">OR</span>
-                <div class="flex-grow border-t border-slate-200"></div>
-            </div>
-
-            <button onclick="sendMagicCode()" class="btn-outline w-full py-3 rounded-2xl font-bold text-xs uppercase tracking-wider">
-                Send me a Login Code
-            </button>
-            
-            <button onclick="handleAuth('signup')" class="text-slate-400 text-xs font-bold hover:text-slate-600 mt-2">
-                Create New Account
+            <button onclick="handleSignup()" class="bg-white border-2 border-slate-200 text-slate-900 hover:border-slate-900 transition w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-xs">
+                Create Account
             </button>
         </div>
 
-        <div id="step-2" class="hidden flex flex-col gap-4 animate-fade-in">
-            <div class="bg-indigo-50 text-indigo-900 p-4 rounded-2xl text-xs font-bold mb-2 border border-indigo-100">
-                Check your email!<br>We sent you a 6-digit code.
+        <div id="view-forgot" class="hidden flex flex-col gap-4">
+            <div class="bg-blue-50 text-blue-900 p-4 rounded-2xl text-xs font-bold mb-2 text-left border border-blue-100">
+                Enter your email address to receive a recovery code.
             </div>
-            
-            <input type="text" id="auth-code" class="input-light w-full p-4 rounded-2xl font-bold text-center text-3xl tracking-[0.5em] text-indigo-600" placeholder="000000" maxlength="6">
-            
-            <button onclick="verifyCode()" class="btn-primary w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-xs mt-2">
+            <input type="email" id="email-forgot" class="input-light w-full p-4 rounded-2xl font-bold text-sm" placeholder="Email Address">
+            <button onclick="sendRecoveryCode()" class="btn-primary w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-xs mt-2">
+                Send Code
+            </button>
+            <button onclick="switchView('login')" class="text-xs font-bold text-slate-400 mt-2 hover:text-slate-600 uppercase tracking-wider">
+                Cancel
+            </button>
+        </div>
+
+        <div id="view-code" class="hidden flex flex-col gap-4">
+            <div class="bg-indigo-50 text-indigo-900 p-4 rounded-2xl text-xs font-bold mb-2 border border-indigo-100">
+                Code sent! Enter it below.
+            </div>
+            <input type="text" id="code-input" class="input-light w-full p-4 rounded-2xl font-bold text-center text-3xl tracking-[0.5em] text-indigo-600" placeholder="000000" maxlength="6">
+            <button onclick="verifyRecoveryCode()" class="btn-primary w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-xs mt-2">
                 Verify Code
             </button>
-            
-            <button onclick="cancelCode()" class="text-xs font-bold text-slate-400 mt-4 hover:text-slate-600 uppercase tracking-wider">
-                &larr; Go Back
+            <button onclick="switchView('forgot')" class="text-xs font-bold text-slate-400 mt-2 hover:text-slate-600 uppercase tracking-wider">
+                &larr; Resend Code
             </button>
         </div>
 
-        <div id="auth-status" class="mt-4 text-red-500 text-xs font-bold min-h-[20px]"></div>
+        <div id="view-new-pass" class="hidden flex flex-col gap-4">
+            <div class="bg-green-50 text-green-900 p-4 rounded-2xl text-xs font-bold mb-2 border border-green-100">
+                Success! Set your new password.
+            </div>
+            <input type="password" id="new-password" class="input-light w-full p-4 rounded-2xl font-bold text-sm" placeholder="New Password">
+            <button onclick="updatePassword()" class="btn-primary w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-xs mt-2">
+                Save & Login
+            </button>
+        </div>
+
+        <div id="status-msg" class="mt-6 text-red-500 text-xs font-bold min-h-[20px]"></div>
     </div>
 
     <script>
         if (typeof CONFIG === 'undefined') { console.error("config.js missing"); }
         const _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
-        // --- 1. Standard Login ---
-        async function handleAuth(type) {
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-pass').value;
-            const statusDiv = document.getElementById('auth-status');
-            
-            if(!email || !password) {
-                statusDiv.innerText = "Please enter email and password.";
-                return;
-            }
-
-            statusDiv.innerText = "Processing...";
-            statusDiv.className = "mt-4 text-slate-500 text-xs font-bold";
-            
-            const { data, error } = type === 'login' 
-                ? await _supabase.auth.signInWithPassword({ email, password }) 
-                : await _supabase.auth.signUp({ email, password });
-
-            if (error) {
-                statusDiv.innerText = error.message;
-                statusDiv.className = "mt-4 text-red-500 text-xs font-bold";
-            } else {
-                if (type === 'signup' && !data.session) {
-                    statusDiv.innerText = "Check your email to confirm signup!";
-                    statusDiv.className = "mt-4 text-green-600 text-xs font-bold";
-                } else {
-                    window.location.href = 'app.html';
-                }
-            }
-        }
-
-        // --- 2. Send Magic Code ---
-        async function sendMagicCode() {
-            const email = document.getElementById('auth-email').value;
-            const statusDiv = document.getElementById('auth-status');
-
-            if (!email) {
-                statusDiv.innerText = "Enter your email address above first.";
-                statusDiv.className = "mt-4 text-red-500 text-xs font-bold";
-                return;
-            }
-
-            statusDiv.innerText = "Sending code...";
-            statusDiv.className = "mt-4 text-slate-500 text-xs font-bold";
-            
-            const { data, error } = await _supabase.auth.signInWithOtp({ email });
-
-            if (error) {
-                statusDiv.innerText = error.message;
-                statusDiv.className = "mt-4 text-red-500 text-xs font-bold";
-            } else {
-                statusDiv.innerText = "";
-                // HIDE Login Form, SHOW Code Form
-                document.getElementById('step-1').classList.add('hidden');
-                document.getElementById('step-2').classList.remove('hidden');
-            }
-        }
-
-        // --- 3. Verify Code ---
-        async function verifyCode() {
-            const email = document.getElementById('auth-email').value;
-            const token = document.getElementById('auth-code').value;
-            const statusDiv = document.getElementById('auth-status');
-
-            statusDiv.innerText = "Verifying...";
-            
-            const { data, error } = await _supabase.auth.verifyOtp({
-                email,
-                token,
-                type: 'email'
+        function switchView(viewName) {
+            ['view-login', 'view-forgot', 'view-code', 'view-new-pass'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
             });
+            document.getElementById('status-msg').innerText = "";
 
-            if (error) {
-                statusDiv.innerText = "Invalid code. Try again.";
-                statusDiv.className = "mt-4 text-red-500 text-xs font-bold";
-            } else {
-                window.location.href = 'app.html';
+            if(viewName === 'login') {
+                document.getElementById('view-login').classList.remove('hidden');
+                document.getElementById('header-title').innerText = "Welcome Back";
+            }
+            if(viewName === 'forgot') {
+                document.getElementById('view-forgot').classList.remove('hidden');
+                document.getElementById('header-title').innerText = "Reset Password";
+            }
+            if(viewName === 'code') {
+                document.getElementById('view-code').classList.remove('hidden');
+                document.getElementById('header-title').innerText = "Verify Code";
+            }
+            if(viewName === 'new-pass') {
+                document.getElementById('view-new-pass').classList.remove('hidden');
+                document.getElementById('header-title').innerText = "New Password";
             }
         }
 
-        // --- 4. Cancel / Back ---
-        function cancelCode() {
-            document.getElementById('step-2').classList.add('hidden');
-            document.getElementById('step-1').classList.remove('hidden');
-            document.getElementById('auth-status').innerText = "";
+        function setStatus(msg, isError = true) {
+            const el = document.getElementById('status-msg');
+            el.innerText = msg;
+            el.className = isError 
+                ? "mt-6 text-red-500 text-xs font-bold min-h-[20px]" 
+                : "mt-6 text-green-600 text-xs font-bold min-h-[20px]";
+        }
+
+        // 1. LOGIN
+        async function handleLogin() {
+            const email = document.getElementById('email-login').value;
+            const password = document.getElementById('pass-login').value;
+            
+            if(!email || !password) return setStatus("Please enter email and password.");
+            setStatus("Logging in...", false);
+
+            const { error } = await _supabase.auth.signInWithPassword({ email, password });
+            if (error) setStatus(error.message);
+            else window.location.href = 'app.html';
+        }
+
+        // 2. SIGNUP
+        async function handleSignup() {
+            const email = document.getElementById('email-login').value;
+            const password = document.getElementById('pass-login').value;
+            if(!email || !password) return setStatus("Enter email/password first.");
+            
+            setStatus("Creating account...", false);
+            const { error } = await _supabase.auth.signUp({ email, password });
+            if (error) setStatus(error.message);
+            else setStatus("Check your email to confirm signup!", false);
+        }
+
+        // 3. SEND CODE
+        async function sendRecoveryCode() {
+            const email = document.getElementById('email-forgot').value;
+            if (!email) return setStatus("Please enter your email.");
+            
+            setStatus("Sending code...", false);
+            const { error } = await _supabase.auth.signInWithOtp({ email });
+
+            if (error) setStatus(error.message);
+            else {
+                switchView('code');
+                setStatus("Code sent! Check your email.", false);
+            }
+        }
+
+        // 4. VERIFY CODE
+        async function verifyRecoveryCode() {
+            const email = document.getElementById('email-forgot').value;
+            const token = document.getElementById('code-input').value;
+
+            setStatus("Verifying...", false);
+            const { error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
+
+            if (error) {
+                setStatus("Invalid code. Try again.");
+            } else {
+                // SUCCESS: User is technically logged in now. 
+                // Don't redirect yet! Show the "New Password" screen.
+                switchView('new-pass');
+                setStatus("Code verified. Set your new password.", false);
+            }
+        }
+
+        // 5. UPDATE PASSWORD (Final Step)
+        async function updatePassword() {
+            const password = document.getElementById('new-password').value;
+            if (!password) return setStatus("Enter a new password.");
+
+            setStatus("Updating password...", false);
+            
+            // Since verifying the code logged us in, we can now update the user
+            const { error } = await _supabase.auth.updateUser({ password: password });
+
+            if (error) {
+                setStatus(error.message);
+            } else {
+                // Password updated! Now redirect to app
+                setStatus("Success! Redirecting...", false);
+                setTimeout(() => {
+                    window.location.href = 'app.html';
+                }, 1000);
+            }
         }
     </script>
 </body>
