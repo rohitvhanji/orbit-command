@@ -12,14 +12,14 @@
     <style>
         :root {
             /* --- POLISHED SAAS THEME --- */
-            --bg-body: #F8FAFC;        
-            --bg-surface: #FFFFFF;    
-            --border-subtle: #E2E8F0; 
+            --bg-body: #F8FAFC;          
+            --bg-surface: #FFFFFF;       
+            --border-subtle: #E2E8F0;    
             
             --text-main: #0F172A;        
-            --text-muted: #64748B;    
+            --text-muted: #64748B;       
             
-            --accent-primary: #6366F1; /* Indigo */
+            --accent-primary: #6366F1; /* Indigo/Purple */
             --accent-secondary: #10B981; /* Emerald */
             
             --status-lunch: #F59E0B;
@@ -107,11 +107,20 @@
             font-size: 0.75rem; color: var(--text-muted); font-weight: 600; cursor: pointer; text-decoration: underline; margin-left: auto;
         }
 
+        /* UPDATED GUEST NOTE STYLING */
         #guest-note {
-            font-size: 0.75rem; color: #EF4444; font-weight: 600; margin-top: 10px; text-align: center; display: none;
-            background: #FEF2F2; padding: 6px 10px; border-radius: 6px; border: 1px solid #FECACA;
+            font-size: 0.75rem; 
+            color: var(--text-main); 
+            font-weight: 600; 
+            margin-top: 10px; 
+            text-align: center; 
+            display: none;
+            background: #FEF3C7; /* Yellow background like Beta tag */
+            padding: 6px 10px; 
+            border-radius: 6px; 
+            border: 1px solid #FDE68A;
         }
-        #guest-note a { color: #B91C1C; text-decoration: underline; cursor: pointer; margin-left: 5px; }
+        #guest-note a { color: var(--text-main); text-decoration: underline; cursor: pointer; margin-left: 5px; font-weight: 800; }
 
         .mgmt-section { padding: 12px 20px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
         
@@ -169,7 +178,7 @@
             background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg'); 
             background-size: 100% 100%; 
             opacity: 0.8; 
-            filter: invert(1) hue-rotate(200deg) saturate(0.6) brightness(1.5) contrast(1.1); 
+            filter: invert(1) hue-rotate(200deg) saturate(0) brightness(1.4) contrast(1.1); 
         }
         #svg-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
@@ -185,6 +194,8 @@
         .chart-header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
         .chart-header-row h2 { font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: -0.5px; }
         .chart-header-row span { color: var(--text-muted); font-weight: 500; font-size: 0.85rem; }
+
+        .header-left-actions { display: flex; align-items: center; gap: 10px; }
 
         .chart-controls { display: flex; align-items: center; gap: 10px; }
         
@@ -224,10 +235,9 @@
         }
         .chart-centered-content { max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; height: 100%; }
 
-        /* --- FIXED SCROLL LOGIC --- */
         #chart-scroll-area {
             max-height: 45vh; 
-            overflow-y: scroll; /* Forces scrollbar track to always show */
+            overflow-y: scroll; 
             overflow-x: hidden;
             padding-right: 5px;
             scroll-snap-type: y mandatory;
@@ -235,36 +245,40 @@
         }
 
         .timezone-row-container { 
-            margin-bottom: 35px; /* Spacing prevents text clipping */
+            margin-bottom: 35px; 
             scroll-snap-align: start;
         }
 
-        /* Footer is separate, sits cleanly below scroll area */
         #chart-static-footer {
             margin-top: 0;
             padding-top: 20px;
             border-top: 1px solid var(--border-subtle);
             background: var(--bg-body);
             flex-shrink: 0;
-            
-            /* ALIGNMENT TRICK: Force scrollbar here too, but invisible */
             overflow-y: scroll; 
             padding-right: 5px; 
         }
 
-        /* Hide footer scrollbar visually, but keep layout reservation */
-        #chart-static-footer::-webkit-scrollbar {
-            width: 4px; /* Matches the global scrollbar width */
-        }
-        #chart-static-footer::-webkit-scrollbar-thumb {
-            background: transparent;
-        }
-        #chart-static-footer::-webkit-scrollbar-track {
-            background: transparent;
-        }
+        #chart-static-footer::-webkit-scrollbar { width: 4px; }
+        #chart-static-footer::-webkit-scrollbar-thumb { background: transparent; }
+        #chart-static-footer::-webkit-scrollbar-track { background: transparent; }
 
-        .chart-label { width: 180px; flex-shrink: 0; padding-right: 15px; display: flex; flex-direction: column; justify-content: center; }
-        .chart-label span { font-size: 0.8rem; font-weight: 700; color: var(--text-main); }
+        .chart-label { 
+            width: 150px; 
+            flex-shrink: 0; 
+            padding-right: 8px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+        }
+        
+        .chart-label span { 
+            font-size: 0.8rem; 
+            font-weight: 700; 
+            color: var(--text-main); 
+            position: relative;
+            top: -3px; 
+        }
 
         .pref-group { display: flex; gap: 3px; margin-top: 2px; }
         .pref-pill { font-size: 0.6rem; padding: 1px 6px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border-subtle); background: white; color: var(--text-muted); transition: 0.2s; }
@@ -281,9 +295,9 @@
         }
         
         .time-tick { flex: 1; font-size: 0.6rem; text-align: center; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
-        .local-time-row { display: flex; margin-left: 180px; gap: 3px; }
+        
+        .local-time-row { display: flex; margin-left: 150px; gap: 3px; }
 
-        /* Suggestions Row Style */
         .match-row { 
             margin-top: 0; 
             padding-top: 10px; 
@@ -296,13 +310,29 @@
         .match-row .chart-box:hover { transform: scale(1.1); z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .highlight-slot { border: 2px solid var(--accent-primary) !important; z-index: 10; transform: scale(1.05); }
 
-        #rec-area-wrapper { margin-top: 0px; padding-top: 10px; display: flex; gap: 20px; align-items: flex-start; flex-shrink: 0; }
+        #rec-area-wrapper { margin-top: 0px; padding-top: 10px; display: flex; gap: 10px; align-items: flex-start; flex-shrink: 0; }
+        
         .section-header { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
         .rec-column-left { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         #rec-results, #selected-results { display: flex; gap: 15px; padding: 10px 5px 20px 5px; }
         #rec-results { overflow-x: auto; }
-        #selected-results { flex-direction: column; }
-        .rec-column-right { flex-shrink: 0; width: 300px; padding-left: 20px; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; }
+        #selected-results { flex-direction: column; margin-top: 15px; } 
+        
+        .rec-column-right { flex-shrink: 0; width: 300px; padding-left: 10px; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; }
+        
+        .btn-share-bottom {
+            width: 100%;
+            margin-top: 45px; 
+            justify-content: center;
+            background: #F1F5F9;
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+        }
+        .btn-share-bottom:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            background: white;
+        }
 
         .rec-card { 
             width: 280px; height: 320px; flex-shrink: 0; background: white; 
@@ -365,8 +395,10 @@
         .modal-content { background: white; width: 95%; max-width: 850px; max-height: 90vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
         .modal-header { padding: 20px; background: white; color: var(--text-main); font-weight: 800; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); }
         .modal-body { padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
-        .city-option { padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; text-align: left; display: flex; flex-direction: column; gap: 2px; }
-        .city-option:hover { background: #F8FAFC; color: var(--accent-primary); }
+        .city-option { padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; text-align: left; display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border-subtle); background: #F8FAFC; }
+        .city-option:hover { background: white; border-color: var(--accent-primary); color: var(--accent-primary); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .city-name { font-weight: 700; color: var(--text-main); font-size: 1rem; }
+        .city-detail { font-size: 0.8rem; color: var(--text-muted); }
         
         .faq-step { display: flex; gap: 20px; align-items: flex-start; }
         .faq-num { flex-shrink:0; width: 28px; height: 28px; background: var(--text-main); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; margin-top: 2px; }
@@ -378,40 +410,77 @@
         #share-toast.show { opacity: 1; top: 40px; }
         
         .map-label-text { font-size: 10px; font-weight: 900; fill: white; stroke: #020617; stroke-width: 3px; paint-order: stroke; }
-        .grid-line { stroke: rgba(255,255,255,0.6); stroke-width: 2px; stroke-dasharray: 4; }
+        .pin-lbl { 
+            font-size: 8px; 
+            font-weight: 800; 
+            fill: #0F172A; 
+            stroke: white; 
+            stroke-width: 3px; 
+            paint-order: stroke; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            text-transform: uppercase;
+        }
+        
+        /* UPDATED GRID LINE COLOR TO PURPLE */
+        .grid-line { stroke: var(--accent-primary); stroke-width: 2px; stroke-dasharray: 4; opacity: 0.8; }
         
         .feedback-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-subtle); background: #F8FAFC; font-family: inherit; font-size: 0.9rem; color: var(--text-main); margin-bottom: 15px; outline: none; transition: 0.2s; }
         .feedback-input:focus { border-color: var(--accent-primary); background: white; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
         .feedback-textarea { width: 100%; height: 120px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-subtle); background: #F8FAFC; resize: none; font-family: inherit; font-size: 0.9rem; color: var(--text-main); margin-bottom: 15px; outline: none; transition: 0.2s; }
         .feedback-textarea:focus { border-color: var(--accent-primary); background: white; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        
+        #global-tooltip {
+            position: fixed;
+            background: var(--text-main);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            z-index: 9999;
+            pointer-events: none;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            white-space: nowrap;
+            transform: translate(-50%, -130%); 
+        }
     </style>
 </head>
 <body>
 
+<div id="global-tooltip"></div>
 <div id="share-toast"><span>🔗 Link Copied to Clipboard!</span></div>
 
-<div id="city-modal" class="modal-overlay"><div class="modal-content" style="max-width:450px;"><div class="modal-header"><span>Select Location</span><span onclick="document.getElementById('city-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div><div class="modal-body" id="modal-list" style="padding:10px;"></div></div></div>
+<div id="city-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width:550px;">
+        <div class="modal-header">
+            <span>Which one?</span>
+            <span onclick="document.getElementById('city-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;" data-tooltip="Close Modal">✕</span>
+        </div>
+        <div class="modal-body" id="modal-list" style="padding:15px; gap:10px;"></div>
+    </div>
+</div>
 
 <div id="feedback-modal" class="modal-overlay">
     <div class="modal-content" style="max-width:500px;">
-        <div class="modal-header"><span>Contact Us</span><span onclick="document.getElementById('feedback-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div>
+        <div class="modal-header"><span>Contact Us</span><span onclick="document.getElementById('feedback-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;" data-tooltip="Close Modal">✕</span></div>
         <div class="modal-body" style="padding:20px;">
             <p style="margin-bottom:15px; font-size:0.9rem;">Have a feature request or found a bug? Let me know directly.</p>
-            <select id="feedback-type" class="feedback-input">
+            <select id="feedback-type" class="feedback-input" data-tooltip="Select feedback category">
                 <option value="General Feedback">General Feedback</option>
                 <option value="Feature Request">Feature Request</option>
                 <option value="Bug Report">Bug Report</option>
             </select>
-            <input type="email" id="feedback-email" class="feedback-input" placeholder="Your Email Address">
-            <textarea id="feedback-text" class="feedback-textarea" placeholder="Type your message here..."></textarea>
-            <button id="send-feedback-btn" class="btn-main btn-login" onclick="sendFeedback()">SEND MESSAGE</button>
+            <input type="email" id="feedback-email" class="feedback-input" placeholder="Your Email Address" data-tooltip="We'll use this to reply to you">
+            <textarea id="feedback-text" class="feedback-textarea" placeholder="Type your message here..." data-tooltip="Be as detailed as possible"></textarea>
+            <button id="send-feedback-btn" class="btn-main btn-login" onclick="sendFeedback()" data-tooltip="Send message to Orbit team">SEND MESSAGE</button>
         </div>
     </div>
 </div>
 
 <div id="faq-modal" class="modal-overlay">
     <div class="modal-content">
-        <div class="modal-header"><span>How to use Orbit</span><span onclick="document.getElementById('faq-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;">✕</span></div>
+        <div class="modal-header"><span>How to use Orbit</span><span onclick="document.getElementById('faq-modal').style.display='none'" style="cursor:pointer; color:#94A3B8;" data-tooltip="Close Guide">✕</span></div>
         <div class="modal-body">
             <div class="faq-step">
                 <div class="faq-num">1</div>
@@ -444,23 +513,24 @@
         <div class="sidebar-header">
             <div class="header-top">
                 <div style="display:flex; align-items:center;">
-                    <span class="text-4xl font-black tracking-tighter kindness-purple" onclick="window.location.reload()">orbit</span>
+                    <span class="text-4xl font-black tracking-tighter kindness-purple" onclick="window.location.href='index.html'">orbit</span>
                     <span class="beta-tag">BETA</span>
                 </div>
             </div>
             <div class="header-actions">
-                <div class="btn-header btn-how-to" onclick="document.getElementById('faq-modal').style.display='flex'">
-                    <span>💡 How to use</span>
-                </div>
-                <div class="btn-header" onclick="document.getElementById('feedback-modal').style.display='flex'">
-                    <span>Contact Us</span>
-                </div>
-                <span id="logout-btn" onclick="logout()">Logout</span>
+                <span id="logout-btn" onclick="logout()" data-tooltip="Sign Out">Logout</span>
             </div>
             <div id="guest-note">Log in to save <a href="auth.html">Login</a></div>
         </div>
-        <div class="mgmt-section"><input type="text" id="cityInput" class="mgmt-input" placeholder="City name..."><button id="addCityBtn" class="btn-main btn-login" onclick="lookupCity()">ADD OFFICE</button></div>
-        <div class="mgmt-section"><input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name..."><select id="newLoc" class="mgmt-input" style="appearance:none;"></select><button class="btn-main btn-signup" onclick="addMember()">ADD TEAMMATE</button></div>
+        <div class="mgmt-section">
+            <input type="text" id="cityInput" class="mgmt-input" placeholder="City name..." data-tooltip="Type city (e.g. 'London', 'Tokyo')">
+            <button id="addCityBtn" class="btn-main btn-login" onclick="lookupCity()" data-tooltip="Search and add location">ADD OFFICE</button>
+        </div>
+        <div class="mgmt-section">
+            <input type="text" id="newName" class="mgmt-input" placeholder="Teammate Name..." data-tooltip="Enter person's name">
+            <select id="newLoc" class="mgmt-input" style="appearance:none;" data-tooltip="Select their location"></select>
+            <button class="btn-main btn-signup" onclick="addMember()" data-tooltip="Add person to team">ADD TEAMMATE</button>
+        </div>
         <div id="member-groups"></div>
     </aside>
 
@@ -480,17 +550,21 @@
             <div class="fixed-header-group">
                 <div class="chart-centered-content">
                     <div class="chart-header-row">
-                        <div>
-                            <h2>Team Overlap</h2>
-                            <span>Visualizing global availability</span>
+                        <div class="header-left-actions">
+                            <div class="btn-header btn-how-to" onclick="document.getElementById('faq-modal').style.display='flex'">
+                                <span>💡 How to use</span>
+                            </div>
+                            <div class="btn-header" onclick="document.getElementById('feedback-modal').style.display='flex'">
+                                <span>Contact Us</span>
+                            </div>
                         </div>
+                        
                         <div class="chart-controls">
                             <div class="chart-legend">
                                 <div class="legend-item"><div class="legend-box" style="background:var(--accent-secondary)"></div> Match</div>
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-lunch)"></div> Ask</div>
                                 <div class="legend-item"><div class="legend-box" style="background:var(--status-weekend)"></div> Off Work</div>
                             </div>
-                            <button onclick="shareDashboard()" class="btn-action btn-action-secondary">Share</button>
                             <button onclick="toggleView('map')" class="btn-action btn-action-primary">World Map</button>
                         </div>
                     </div>
@@ -511,6 +585,9 @@
                         <div class="rec-column-right" id="selected-section" style="display:none;">
                             <div class="section-header" style="color:var(--accent-primary);">🎯 Selected Time</div>
                             <div id="selected-results"></div>
+                            <button onclick="shareDashboard()" class="btn-action btn-share-bottom" data-tooltip="Copy Link to this plan">
+                                🔗 Share Recommendation
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -518,11 +595,11 @@
         </div>
 
         <footer id="scheduler">
-            <div class="sched-group"><span class="sched-desc">Date</span><input type="date" id="schedDate" onchange="setFitMode(true)"></div>
-            <div class="sched-group"><span class="sched-desc">Zone</span><select id="inputTz" onchange="buildMatchChart()"></select></div>
-            <div class="sched-group"><span class="sched-desc">Time</span><div style="display:flex; gap:5px;"><input type="number" id="hourVal" placeholder="HH" min="0" max="23" onchange="setFitMode(true)"><select id="minVal" onchange="setFitMode(true)"><option value="00">00</option><option value="30">30</option></select></div></div>
-            <div class="sched-group"><span class="sched-desc">Length</span><select id="durVal" onchange="buildMatchChart()"><option value="30">30m</option><option value="60">1h</option><option value="90">1.5h</option></select></div>
-            <button onclick="resetToLive()">
+            <div class="sched-group"><span class="sched-desc">Date</span><input type="date" id="schedDate" onchange="setFitMode(true)" data-tooltip="Select Meeting Date"></div>
+            <div class="sched-group"><span class="sched-desc">Zone</span><select id="inputTz" onchange="buildMatchChart()" data-tooltip="Select Base Timezone"></select></div>
+            <div class="sched-group"><span class="sched-desc">Time</span><div style="display:flex; gap:5px;"><input type="number" id="hourVal" placeholder="HH" min="0" max="23" onchange="setFitMode(true)" data-tooltip="Set Hour (0-23)"><select id="minVal" onchange="setFitMode(true)" data-tooltip="Set Minutes"><option value="00">00</option><option value="30">30</option></select></div></div>
+            <div class="sched-group"><span class="sched-desc">Length</span><select id="durVal" onchange="buildMatchChart()" data-tooltip="Meeting Duration"><option value="30">30m</option><option value="60" selected>1h</option><option value="90">1.5h</option></select></div>
+            <button onclick="resetToLive()" data-tooltip="Reset to Current Time">
                 Live
             </button>
         </footer>
@@ -537,6 +614,7 @@
     const DEFAULT_TEAM = [{ id: 'g1', name: 'Ravi', location_name: 'Bengaluru' },{ id: 'g2', name: 'Sarah', location_name: 'New York' },{ id: 'g3', name: 'Mike', location_name: 'Chicago' },{ id: 'g4', name: 'Chen', location_name: 'San Francisco' }];
 
     let locationData = {}; let team = []; let isFitMode = false; let isMatchViewActive = true; let workDateUTC_MS = Date.now(); let chartExclusions = new Set(); let tzPreferences = {}; let manualSelectionSlot = null; let isGuestMode = false;
+    let pendingGeoData = []; // Store search results
 
     if(CONFIG.EMAILJS_PUBLIC_KEY) {
         emailjs.init(CONFIG.EMAILJS_PUBLIC_KEY);
@@ -607,8 +685,64 @@
         if(cur && Array.from(sel.options).some(o => o.value === cur)) { sel.value = cur; } else if (defaultVal !== null) { sel.value = defaultVal; }
     }
 
-    async function lookupCity() { const input = document.getElementById('cityInput').value.trim(); if (!input) return; document.getElementById('addCityBtn').innerText = "⏳"; try { const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}`).then(r => r.json()); if (geo && geo.length > 0) confirmAndAddCity(geo[0]); } catch (e) {} document.getElementById('addCityBtn').innerText = "ADD OFFICE"; }
-    async function confirmAndAddCity(geo) { try { const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${CONFIG.TIMEZONEDB_KEY}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`).then(r => r.json()); if(tzR.status === 'OK') { const n = { name: geo.display_name.split(',')[0], code: geo.display_name.substring(0,3).toUpperCase(), lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation }; if(isGuestMode) { locationData[n.name] = { ...n, offset: n.utc_offset }; tzPreferences[`${n.tz}_${n.utc_offset}`] = new Set(); localStorage.setItem('orbit_guest_data', JSON.stringify({ locations: Object.values(locationData), team: team })); populateLocDropdown(); populateTzDropdown(); render(); if(isMatchViewActive) buildMatchChart(); } else { const { data: { user } } = await _supabase.auth.getUser(); await _supabase.from('locations').upsert({ ...n, user_id: user.id }); loadData(); } } } catch(e) {} }
+    async function lookupCity() { 
+        const input = document.getElementById('cityInput').value.trim(); 
+        if (!input) return; 
+        document.getElementById('addCityBtn').innerText = "⏳"; 
+        
+        try { 
+            const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}`).then(r => r.json()); 
+            if (geo && geo.length > 0) {
+                // Populate Modal
+                const list = document.getElementById('modal-list');
+                list.innerHTML = '';
+                pendingGeoData = geo;
+                
+                geo.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'city-option';
+                    div.innerHTML = `<div class="city-name">${item.display_name.split(',')[0]}</div><div class="city-detail">${item.display_name}</div>`;
+                    div.onclick = () => {
+                        confirmAndAddCity(item);
+                        document.getElementById('city-modal').style.display = 'none';
+                    };
+                    list.appendChild(div);
+                });
+                
+                document.getElementById('city-modal').style.display = 'flex';
+            } else {
+                alert("No locations found. Please try a different spelling.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error fetching location data.");
+        } 
+        document.getElementById('addCityBtn').innerText = "ADD OFFICE"; 
+    }
+
+    async function confirmAndAddCity(geo) { 
+        try { 
+            const tzR = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${CONFIG.TIMEZONEDB_KEY}&format=json&by=position&lat=${geo.lat}&lng=${geo.lon}`).then(r => r.json()); 
+            if(tzR.status === 'OK') { 
+                const n = { name: geo.display_name.split(',')[0], code: geo.display_name.substring(0,3).toUpperCase(), lon: parseFloat(geo.lon), lat: parseFloat(geo.lat), utc_offset: tzR.gmtOffset / 3600, tz: tzR.abbreviation }; 
+                if(isGuestMode) { 
+                    locationData[n.name] = { ...n, offset: n.utc_offset }; 
+                    tzPreferences[`${n.tz}_${n.utc_offset}`] = new Set(); 
+                    localStorage.setItem('orbit_guest_data', JSON.stringify({ locations: Object.values(locationData), team: team })); 
+                    populateLocDropdown(); 
+                    populateTzDropdown(); 
+                    render(); 
+                    if(isMatchViewActive) buildMatchChart(); 
+                } else { 
+                    const { data: { user } } = await _supabase.auth.getUser(); 
+                    await _supabase.from('locations').upsert({ ...n, user_id: user.id }); 
+                    loadData(); 
+                }
+                document.getElementById('cityInput').value = ''; // Clear input
+            } 
+        } catch(e) {} 
+    }
+
     async function addMember() { const n = document.getElementById('newName').value.trim(), l = document.getElementById('newLoc').value; if (!n || !l) return; if(isGuestMode) { team.push({ id: 'g' + Date.now(), name: n, loc: l }); localStorage.setItem('orbit_guest_data', JSON.stringify({ locations: Object.values(locationData), team: team })); render(); if(isMatchViewActive) buildMatchChart(); } else { const { data: { user } } = await _supabase.auth.getUser(); await _supabase.from('teammates').insert([{ name: n, location_name: l, user_id: user.id }]); loadData(); } document.getElementById('newName').value = ''; }
     async function removeLocation(n) { if(confirm(`Delete ${n}?`)) { if(isGuestMode) { delete locationData[n]; team = team.filter(m => m.loc !== n); localStorage.setItem('orbit_guest_data', JSON.stringify({ locations: Object.values(locationData), team: team })); populateLocDropdown(); populateTzDropdown(); render(); if(isMatchViewActive) buildMatchChart(); } else { await _supabase.from('locations').delete().eq('name', n); loadData(); } } }
     async function removeMember(id) { if(isGuestMode) { team = team.filter(m => m.id !== id); localStorage.setItem('orbit_guest_data', JSON.stringify({ locations: Object.values(locationData), team: team })); render(); if(isMatchViewActive) buildMatchChart(); } else { await _supabase.from('teammates').delete().eq('id', id); loadData(); } }
@@ -637,7 +771,7 @@
         const rV = document.getElementById('inputTz').value, dM = parseInt(document.getElementById('durVal').value); let sD, eD; if(rV === 'local') { sD = new Date(s.utc); eD = new Date(s.utc + (dM * 60000)); } else { const o = parseFloat(rV) * 3600000; sD = new Date(s.utc + o); eD = new Date(s.utc + o + (dM * 60000)); }
         const fT = (d) => rV === 'local' ? `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}` : `${d.getUTCHours()}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
         const fD = (d) => rV === 'local' ? d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}) : d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
-        let closeBtn = iS ? `<div style="position:absolute; top:12px; right:12px; cursor:pointer; font-size:1.1rem; color:var(--text-muted); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#F1F5F9;" onclick="event.stopPropagation(); resetToLive()">✕</div>` : `<span class="rec-tag ${s.isGreen?'tag-green':'tag-yellow'}">${s.isGreen?'MATCH':'ASK'}</span>`;
+        let closeBtn = iS ? `<div style="position:absolute; top:12px; right:12px; cursor:pointer; font-size:1.1rem; color:var(--text-muted); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#F1F5F9;" onclick="event.stopPropagation(); resetToLive()" data-tooltip="Clear Selection">✕</div>` : `<span class="rec-tag ${s.isGreen?'tag-green':'tag-yellow'}">${s.isGreen?'MATCH':'ASK'}</span>`;
         let aB = iS ? `<a href="https://www.google.com/calendar/render?action=TEMPLATE&text=Orbit%20Team%20Sync&dates=${new Date(s.utc).toISOString().replace(/-|:|\.\d\d\d/g, "")}/${new Date(s.utc + (dM * 60000)).toISOString().replace(/-|:|\.\d\d\d/g, "")}" target="_blank" style="display:block; margin-top:15px; text-align:center; padding:12px; background:var(--slack-purple); color:white; text-decoration:none; border-radius:12px; font-weight:700; font-size:0.9rem;">📅 Schedule Meet</a>` : "";
         card.innerHTML = `${closeBtn}<div class="rec-time-main"><span>${s.isGreen?'🟢':'🟡'}</span> ${fT(sD)} – ${fT(eD)}</div><div class="rec-reason">${s.reason}</div><div class="rec-date-sub">${fD(sD)}</div><div class="rec-list"></div>${aB}`;
         const active = [...new Set(Object.values(locationData).map(l => `${l.tz}_${l.offset}`))].filter(k => !chartExclusions.has(k));
@@ -660,9 +794,9 @@
             if (chartExclusions.has(key)) return; const loc = groups[key], prefs = tzPreferences[key] || new Set();
             let rowH = `<div class="timezone-row-container"><div class="local-time-row">`;
             for(let i=0; i<count; i++){ const slot = sUTC + (i * sMs), lD = new Date(slot + (loc.offset * 3600000)); let h = lD.getUTCHours(); let dP = (h === 0 && lD.getUTCMinutes() === 0) ? `<span style="color:var(--slack-purple); font-weight:900; font-size:0.6rem;">${lD.toLocaleDateString('en-US', { weekday: 'short', timeZone:'UTC' })}</span>` : h; rowH += `<div class="time-tick">${dP}</div>`; }
-            rowH += `</div><div class="chart-row"><div class="chart-label"><span>${loc.tz}</span><div class="pref-group"><div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')">🌅</div><div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')">🦉</div><div class="pref-pill ${prefs.has('global')?'global-active':''}" onclick="togglePreference('${key}', 'global')">🌍</div></div></div><div class="chart-grid">`;
+            rowH += `</div><div class="chart-row"><div class="chart-label"><span>${loc.tz}</span><div class="pref-group"><div class="pref-pill ${prefs.has('early')?'active':''}" onclick="togglePreference('${key}', 'early')" data-tooltip="Early bird - 7 to 9">☀</div><div class="pref-pill ${prefs.has('night')?'active':''}" onclick="togglePreference('${key}', 'night')" data-tooltip="Night Owl - 5 to 22:30">🌙</div><div class="pref-pill ${prefs.has('global')?'global-active':''}" onclick="togglePreference('${key}', 'global')" data-tooltip="Global Flex - 12 hrs">🌍</div></div></div><div class="chart-grid">`;
             for(let i=0; i<count; i++){ const slot = sUTC + (i * sMs), lD = new Date(slot + (loc.offset * 3600000)), h = lD.getUTCHours() + (lD.getUTCMinutes()/60), s = getStatus(slot + (loc.offset * 3600000), h); let isG = false; if (lD.getUTCDay() !== 0 && lD.getUTCDay() !== 6) { if(prefs.has('global')) { if(h>=6 && h<24) isG = true; } else { if(!(h>=22.5 || h<7)) { if((h>=9 && h<12)||(h>=13.5 && h<17)) isG = true; if(prefs.has('early') && h>=7 && h<9) isG = true; if(prefs.has('night') && h>=17 && h<22.5) isG = true; } } } 
-            const bgColor = isG ? '#D1FAE5' : (s.isRed ? '#F1F5F9' : '#FEF3C7'); const textColor = isG ? '#047857' : (s.isRed ? '#94A3B8' : '#B45309'); rowH += `<div class="chart-box ${isFitMode && workDateUTC_MS === slot ? 'highlight-slot' : ''}" style="background:${bgColor}; color:${textColor};">${isG ? '💻' : s.emoji}</div>`; }
+            const bgColor = isG ? '#D1FAE5' : (s.isRed ? '#F1F5F9' : '#FEF3C7'); const textColor = isG ? '#047857' : (s.isRed ? '#94A3B8' : '#B45309'); rowH += `<div class="chart-box ${isFitMode && workDateUTC_MS === slot ? 'highlight-slot' : ''}" style="background:${bgColor}; color:${textColor};" data-tooltip="${isG ? 'Online' : 'Offline'}">${isG ? '💻' : s.emoji}</div>`; }
             rowH += `</div></div></div>`; 
             // Append to SCROLL area
             scrollBody.innerHTML += rowH;
@@ -673,29 +807,45 @@
         footerBody.innerHTML = footerHTML;
 
         const g = document.getElementById('m-grid');
-        for(let i=0; i<count; i++){ const slot = sUTC + (i * sMs), data = evaluateMatch(slot, parseFloat(rV==='local'?-1*(new Date().getTimezoneOffset()/60):rV), dM, "Team"); allProcessedSlots.push({ utc: slot, ...data }); const box = document.createElement('div'); box.className = 'chart-box'; if (isFitMode && workDateUTC_MS === slot) box.classList.add('highlight-slot'); box.style.background = data.color; box.onclick = () => syncAndRender(slot); g.appendChild(box); }
+        for(let i=0; i<count; i++){ const slot = sUTC + (i * sMs), data = evaluateMatch(slot, parseFloat(rV==='local'?-1*(new Date().getTimezoneOffset()/60):rV), dM, "Team"); allProcessedSlots.push({ utc: slot, ...data }); const box = document.createElement('div'); box.className = 'chart-box'; if (isFitMode && workDateUTC_MS === slot) box.classList.add('highlight-slot'); box.style.background = data.color; box.setAttribute('data-tooltip', data.reason); box.onclick = () => syncAndRender(slot); g.appendChild(box); }
         const rc = document.getElementById('rec-results'); rc.innerHTML = ''; allProcessedSlots.filter(r => !r.isRed).sort((a,b) => b.totalScore - a.totalScore || a.utc - b.utc).slice(0, 3).forEach(s => renderTile(s, rc, false));
         const sc = document.getElementById('selected-results'), sw = document.getElementById('selected-section'); sc.innerHTML = ''; 
         if (isFitMode) { const s = allProcessedSlots.find(r => r.utc === workDateUTC_MS); if (s) { renderTile(s, sc, true); sw.style.display = 'block'; } else { sw.style.display = 'none'; } } else { sw.style.display = 'none'; }
     }
     function syncAndRender(uM) { workDateUTC_MS = uM; isFitMode = true; const rV = document.getElementById('inputTz').value; let dD = (rV === 'local') ? new Date(uM) : new Date(uM + (parseFloat(rV) * 3600000)); document.getElementById('hourVal').value = dD.getUTCHours(); document.getElementById('minVal').value = dD.getUTCMinutes() >= 30 ? "30" : "00"; render(); buildMatchChart(); }
     function render() {
-        const rM = isFitMode ? workDateUTC_MS : Date.now(), c = document.getElementById('member-groups'); if (c) { c.innerHTML = ''; if (Object.keys(locationData).length === 0) { c.innerHTML = `<div style="padding:20px; text-align:center; opacity:0.6; color:#94A3B8;">Add a city above.</div>`; } else { const gs = {}; Object.keys(locationData).forEach(n => { const d = locationData[n], k = `${d.tz}_${d.offset}`; if(!gs[k]) gs[k] = { label: d.tz, offset: d.offset, cities: [] }; gs[k].cities.push(n); }); Object.keys(gs).sort((a,b) => gs[b].offset - gs[a].offset).forEach(k => { const g = gs[k], l = new Date(rM + (g.offset * 3600000)), ds = l.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }), ts = l.getUTCHours().toString().padStart(2,'0') + ":" + l.getUTCMinutes().toString().padStart(2,'0'); let tH = `<div class="timezone-group"><div class="tz-header"><span>${g.label} (${g.offset >= 0 ? '+' : ''}${g.offset})</span><span>${ds} ${ts}</span></div>`; g.cities.forEach(loc => { const ms = team.filter(m => m.loc === loc); tH += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')">×</span></div>`; ms.forEach(m => { 
+        const rM = isFitMode ? workDateUTC_MS : Date.now(), c = document.getElementById('member-groups'); if (c) { c.innerHTML = ''; if (Object.keys(locationData).length === 0) { c.innerHTML = `<div style="padding:20px; text-align:center; opacity:0.6; color:#94A3B8;">Add a city above.</div>`; } else { const gs = {}; Object.keys(locationData).forEach(n => { const d = locationData[n], k = `${d.tz}_${d.offset}`; if(!gs[k]) gs[k] = { label: d.tz, offset: d.offset, cities: [] }; gs[k].cities.push(n); }); Object.keys(gs).sort((a,b) => gs[b].offset - gs[a].offset).forEach(k => { const g = gs[k], l = new Date(rM + (g.offset * 3600000)), ds = l.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }), ts = l.getUTCHours().toString().padStart(2,'0') + ":" + l.getUTCMinutes().toString().padStart(2,'0'); let tH = `<div class="timezone-group"><div class="tz-header"><span>${g.label} (${g.offset >= 0 ? '+' : ''}${g.offset})</span><span>${ds} ${ts}</span></div>`; g.cities.forEach(loc => { const ms = team.filter(m => m.loc === loc); tH += `<div class="location-card"><div class="loc-header"><span>${loc}</span><span class="btn-hover-del" onclick="removeLocation('${loc}')" data-tooltip="Remove Location">×</span></div>`; ms.forEach(m => { 
             // FIXED: Calculate real hour for status
             const localTime = new Date(rM + (locationData[loc].offset * 3600000));
             const h = localTime.getUTCHours() + (localTime.getUTCMinutes()/60);
             const s = getStatus(rM + (locationData[loc].offset * 3600000), h); 
-            tH += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${s.emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')">×</span></div></div>`; 
+            tH += `<div class="member-row"><div><span class="status-dot" style="background:${s.color}"></span><span>${m.name}</span></div><div>${s.emoji}<span class="btn-hover-del" onclick="removeMember('${m.id}')" data-tooltip="Remove Member">×</span></div></div>`; 
         }); tH += `</div>`; }); c.innerHTML += tH + `</div>`; }); } } drawMap(rM);
     }
     function addNL(x, t, c, p) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"), l = document.createElementNS("http://www.w3.org/2000/svg", "line"), tx = document.createElementNS("http://www.w3.org/2000/svg", "text"); l.setAttribute("x1", x); l.setAttribute("y1", 5); l.setAttribute("x2", x); l.setAttribute("y2", 400); l.setAttribute("class", "grid-line"); tx.setAttribute("x", x+5); tx.setAttribute("y", 20); tx.setAttribute("fill", c); tx.setAttribute("class", "map-label-text"); tx.textContent = t; g.appendChild(l); g.appendChild(tx); p.appendChild(g); }
-    function drawMap(rM) { const n = document.getElementById('day-night-layer'), lb = document.getElementById('grid-label-layer'), mk = document.getElementById('marker-layer'); n.innerHTML = lb.innerHTML = mk.innerHTML = ''; const uH = new Date(rM).getUTCHours() + new Date(rM).getUTCMinutes()/60; for(let i=0; i<24; i++) { const ln = (i*15)-180; const x = (ln+180)*2.222; const hI = Math.floor((24+uH+(ln/15))%24); if (hI < 6 || hI >= 18) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)"); n.appendChild(r); } if (hI === 9) addNL(x, "START", "var(--accent-secondary)", lb); else if (hI === 17) addNL(x, "END", "var(--accent-secondary)", lb); } Object.values(locationData).forEach(d => { const px = (d.lon + 180) * 2.222, py = (90 - d.lat) * 2.222, dt = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dt.setAttribute("cx", px); dt.setAttribute("cy", py); dt.setAttribute("r", 4); dt.setAttribute("fill", "white"); dt.setAttribute("stroke", "black"); mk.appendChild(dt); const tx = document.createElementNS("http://www.w3.org/2000/svg", "text"); tx.setAttribute("x", px + 6); tx.setAttribute("y", py + 3); tx.setAttribute("class", "pin-lbl"); tx.textContent = d.code; mk.appendChild(tx); }); }
+    function drawMap(rM) { const n = document.getElementById('day-night-layer'), lb = document.getElementById('grid-label-layer'), mk = document.getElementById('marker-layer'); n.innerHTML = lb.innerHTML = mk.innerHTML = ''; const uH = new Date(rM).getUTCHours() + new Date(rM).getUTCMinutes()/60; for(let i=0; i<24; i++) { const ln = (i*15)-180; const x = (ln+180)*2.222; const hI = Math.floor((24+uH+(ln/15))%24); if (hI < 6 || hI >= 18) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("width", 33.4); r.setAttribute("height", 400); r.setAttribute("fill", "var(--night-wash)"); n.appendChild(r); } if (hI === 9) addNL(x, "START WORK", "var(--accent-primary)", lb); else if (hI === 17) addNL(x, "END WORK", "var(--accent-primary)", lb); } Object.values(locationData).forEach(d => { const px = (d.lon + 180) * 2.222, py = (90 - d.lat) * 2.222, dt = document.createElementNS("http://www.w3.org/2000/svg", "circle"); dt.setAttribute("cx", px); dt.setAttribute("cy", py); dt.setAttribute("r", 3); dt.setAttribute("fill", "var(--accent-primary)"); dt.setAttribute("stroke", "white"); dt.setAttribute("stroke-width", "1.5"); mk.appendChild(dt); const tx = document.createElementNS("http://www.w3.org/2000/svg", "text"); tx.setAttribute("x", px + 6); tx.setAttribute("y", py + 3); tx.setAttribute("class", "pin-lbl"); tx.textContent = d.code; mk.appendChild(tx); }); }
     function setFitMode(v) { const h = parseInt(document.getElementById('hourVal').value) || 0, dS = document.getElementById('schedDate').value, rV = document.getElementById('inputTz').value; workDateUTC_MS = (rV === 'local') ? new Date(dS + "T" + h.toString().padStart(2,'0') + ":00").getTime() : (new Date(dS + "T" + h.toString().padStart(2,'0') + ":00Z").getTime() - parseFloat(rV)*3600000); isFitMode = v; if(isMatchViewActive) buildMatchChart(); else render(); }
     function resetToLive() { document.getElementById('schedDate').valueAsDate = new Date(); document.getElementById('hourVal').value = ""; document.getElementById('minVal').value = "00"; workDateUTC_MS = Date.now(); isFitMode = false; if(isMatchViewActive) buildMatchChart(); else render(); }
+    function closeModal() { document.getElementById('city-modal').style.display = 'none'; }
+    
+    // RESTORED TOOLTIP LISTENER
+    const tooltip = document.getElementById('global-tooltip');
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            tooltip.textContent = target.getAttribute('data-tooltip');
+            tooltip.style.display = 'block';
+            const rect = target.getBoundingClientRect();
+            tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+            tooltip.style.top = rect.top + 'px';
+        }
+    });
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) tooltip.style.display = 'none';
+    });
     
     checkSession(); 
 </script>
 </body>
 </html>
-
-```
